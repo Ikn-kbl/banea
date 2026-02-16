@@ -2,140 +2,45 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BANËA PRIVÉ</title>
-    <script src="/socket.io/socket.io.js"></script>
-    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <title>BANËA V50 - VERROU TOTAL</title>
     <style>
-        body { background: #0b0e11; color: #e9edef; font-family: sans-serif; margin: 0; display: flex; flex-direction: column; height: 100vh; }
-        #login-screen { padding: 50px; text-align: center; }
-        #main-screen { display: none; flex: 1; display: flex; flex-direction: column; }
-        
-        /* Liste des contacts */
-        #userList { background: #111b21; border-bottom: 1px solid #333; padding: 10px; overflow-x: auto; white-space: nowrap; }
-        .user-btn { display: inline-block; background: #202c33; padding: 10px; margin-right: 10px; border-radius: 20px; cursor: pointer; border: 1px solid transparent; }
-        .user-btn.active { border-color: #00d2ff; background: #2a3942; }
-
-        /* Zone de Chat */
-        #chat-window { flex: 1; display: flex; flex-direction: column; padding: 10px; }
-        #chat-display { flex: 1; overflow-y: auto; background: #0b141a; border-radius: 10px; padding: 15px; margin-bottom: 10px; border: 1px solid #222; }
-        
-        /* Vidéo */
-        .video-container { display: flex; justify-content: center; gap: 5px; margin-bottom: 10px; }
-        video { width: 120px; height: 120px; background: #000; border-radius: 10px; object-fit: cover; border: 1px solid #00d2ff; }
-
-        input { background: #2a3942; border: none; padding: 15px; color: white; border-radius: 10px; flex: 1; }
-        button { background: #00a884; color: white; border: none; padding: 15px; border-radius: 10px; cursor: pointer; font-weight: bold; }
-        .msg { margin-bottom: 8px; padding: 8px 12px; border-radius: 8px; max-width: 80%; }
-        .sent { background: #005c4b; align-self: flex-end; margin-left: auto; }
-        .received { background: #202c33; align-self: flex-start; }
+        body { background: #000; color: white; text-align: center; font-family: sans-serif; padding-top: 50px; }
+        .btn { background: #00d2ff; color: black; padding: 15px 30px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; }
+        #app-content { display: none; }
     </style>
 </head>
 <body>
 
-    <div id="login-screen">
-        <h1>BANËA</h1>
-        <input type="text" id="pseudoInput" placeholder="Ton pseudo...">
-        <button onclick="demarrer()">COMMENCER</button>
+    <div id="start-screen">
+        <h1>BANËA V50</h1>
+        <p>Le système est verrouillé. Rien ne s'activera sans ton clic.</p>
+        <button class="btn" onclick="chargerLogiciel()">DÉVERROUILLER & ENTRER</button>
     </div>
 
-    <div id="main-screen">
-        <div id="userList"></div>
-
-        <div id="chat-window">
-            <div id="target-info" style="padding: 10px; font-weight: bold; color: #00d2ff;">Sélectionnez un contact...</div>
-            
-            <div class="video-container">
-                <video id="localVid" autoplay muted playsinline></video>
-                <video id="remoteVid" autoplay playsinline></video>
-            </div>
-
-            <div id="chat-display"></div>
-
-            <div id="input-area" style="display: flex; gap: 5px;">
-                <input type="text" id="msgInput" placeholder="Message privé...">
-                <button onclick="envoyerPrive()">ENVOYER</button>
-                <button id="btnAppel" style="background: #00d2ff; display:none;" onclick="appelerPrive()">VIDÉO</button>
-            </div>
-        </div>
+    <div id="app-content">
+        <p>Chargement des modules de sécurité...</p>
+        <div id="zone-chat"></div>
     </div>
 
     <script>
-        let socket, peer, monStream, monNom, targetSocketId, targetPeerId;
+        // Cette fonction est la SEULE qui peut charger les outils de caméra
+        function chargerLogiciel() {
+            document.getElementById('start-screen').style.display = 'none';
+            document.getElementById('app-content').style.display = 'block';
 
-        function demarrer() {
-            monNom = document.getElementById('pseudoInput').value;
-            if(!monNom) return;
+            // On injecte les scripts UNIQUEMENT maintenant
+            const s1 = document.createElement('script');
+            s1.src = "/socket.io/socket.io.js";
+            document.head.appendChild(s1);
 
-            document.getElementById('login-screen').style.display = 'none';
-            document.getElementById('main-screen').style.display = 'flex';
+            const s2 = document.createElement('script');
+            s2.src = "https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js";
+            document.head.appendChild(s2);
 
-            socket = io();
-            peer = new Peer();
-
-            navigator.mediaDevices.getUserMedia({video: true, audio: true}).then(s => {
-                monStream = s;
-                document.getElementById('localVid').srcObject = s;
-            });
-
-            peer.on('open', (id) => {
-                socket.emit('join-room', { username: monNom, peerId: id });
-            });
-
-            // Liste des utilisateurs
-            socket.on('update-users', (users) => {
-                const list = document.getElementById('userList');
-                list.innerHTML = "";
-                users.forEach(u => {
-                    if(u.id !== socket.id) {
-                        const btn = document.createElement('div');
-                        btn.className = 'user-btn';
-                        btn.innerText = "👤 " + u.name;
-                        btn.onclick = () => selectUser(u.id, u.name, u.peerId, btn);
-                        list.appendChild(btn);
-                    }
-                });
-            });
-
-            // Recevoir un message privé
-            socket.on('receive-private-message', (data) => {
-                const display = document.getElementById('chat-display');
-                const type = data.sender === monNom ? 'sent' : 'received';
-                display.innerHTML += `<div class="msg ${type}"><b>${data.sender}:</b> ${data.text}</div>`;
-                display.scrollTop = display.scrollHeight;
-            });
-
-            // Recevoir un appel
-            peer.on('call', (call) => {
-                call.answer(monStream);
-                call.on('stream', (rs) => document.getElementById('remoteVid').srcObject = rs);
-            });
-        }
-
-        function selectUser(sid, name, pid, element) {
-            targetSocketId = sid;
-            targetPeerId = pid;
-            document.getElementById('target-info').innerText = "Discussion avec " + name;
-            document.getElementById('btnAppel').style.display = 'block';
-            
-            // Highlight du bouton
-            document.querySelectorAll('.user-btn').forEach(b => b.classList.remove('active'));
-            element.classList.add('active');
-            
-            document.getElementById('chat-display').innerHTML = ""; // Optionnel : vide le chat quand on change de personne
-        }
-
-        function envoyerPrive() {
-            const txt = document.getElementById('msgInput').value;
-            if(!txt || !targetSocketId) return;
-            socket.emit('send-private-message', { toSocketId: targetSocketId, sender: monNom, text: txt });
-            document.getElementById('msgInput').value = "";
-        }
-
-        function appelerPrive() {
-            if(!targetPeerId) return;
-            const call = peer.call(targetPeerId, monStream);
-            call.on('stream', (rs) => document.getElementById('remoteVid').srcObject = rs);
+            s2.onload = () => {
+                alert("Système prêt. Caméra toujours éteinte.");
+                // Ici tu peux remettre la logique de connexion socket
+            };
         }
     </script>
 </body>
