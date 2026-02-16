@@ -10,20 +10,19 @@ let allUsers = [];
 
 io.on('connection', (socket) => {
     socket.on('join-room', (data) => {
-        const newUser = { 
-            id: socket.id, 
-            name: data.username, 
-            peerId: data.peerId 
-        };
+        const newUser = { id: socket.id, name: data.username, peerId: data.peerId };
         allUsers.push(newUser);
         io.emit('update-users', allUsers);
     });
 
-    // MESSAGE PRIVÉ : On envoie uniquement au destinataire (to) et à l'expéditeur
     socket.on('send-private-message', (data) => {
-        const msgPayload = { sender: data.sender, text: data.text, fromId: socket.id };
-        io.to(data.toSocketId).emit('receive-private-message', msgPayload);
-        socket.emit('receive-private-message', msgPayload); 
+        io.to(data.toSocketId).emit('receive-private-message', { sender: data.sender, text: data.text });
+        socket.emit('receive-private-message', { sender: data.sender, text: data.text });
+    });
+
+    // Signal d'appel envoyé au destinataire
+    socket.on('propose-call', (data) => {
+        io.to(data.toSocketId).emit('incoming-call-request', { fromName: data.fromName, fromPeerId: data.fromPeerId });
     });
 
     socket.on('disconnect', () => {
@@ -33,4 +32,5 @@ io.on('connection', (socket) => {
 });
 
 const PORT = process.env.PORT || 8080;
-http.listen(PORT, () => console.log(`Serveur privé prêt sur ${PORT}`));
+http.listen(PORT, () => console.log(`Serveur prêt`));
+
