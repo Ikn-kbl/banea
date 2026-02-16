@@ -6,29 +6,24 @@ const path = require('path');
 
 app.use(express.static(__dirname));
 
-// Stockage des utilisateurs en mémoire
 let allUsers = [];
 
 io.on('connection', (socket) => {
-    console.log('Connecté:', socket.id);
-
     socket.on('join-room', (data) => {
-        // On enregistre l'utilisateur avec son nom et son PeerID (vidéo)
         const newUser = { 
             id: socket.id, 
             name: data.username, 
             peerId: data.peerId 
         };
         allUsers.push(newUser);
-        
-        // On envoie la liste mise à jour à TOUT LE MONDE
         io.emit('update-users', allUsers);
-        console.log(data.username + " a rejoint le live");
     });
 
-    socket.on('send-message', (data) => {
-        // On renvoie le message à tout le monde immédiatement
-        io.emit('receive-message', data);
+    // MESSAGE PRIVÉ : On envoie uniquement au destinataire (to) et à l'expéditeur
+    socket.on('send-private-message', (data) => {
+        const msgPayload = { sender: data.sender, text: data.text, fromId: socket.id };
+        io.to(data.toSocketId).emit('receive-private-message', msgPayload);
+        socket.emit('receive-private-message', msgPayload); 
     });
 
     socket.on('disconnect', () => {
@@ -37,9 +32,5 @@ io.on('connection', (socket) => {
     });
 });
 
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'index.html'));
-});
-
 const PORT = process.env.PORT || 8080;
-http.listen(PORT, () => console.log(`Serveur actif sur port ${PORT}`));
+http.listen(PORT, () => console.log(`Serveur privé prêt sur ${PORT}`));
