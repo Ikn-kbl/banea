@@ -31,4 +31,4 @@ io.on('connection', (socket) => {
 });
 
 const PORT = process.env.PORT || 8080;
-http.listen(PORT, () => console.log(`Serveur actif`));
+http.listen(PORT, () => console.log(`Serveur prêt`));
