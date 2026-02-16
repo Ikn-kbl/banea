@@ -20,7 +20,6 @@ io.on('connection', (socket) => {
         socket.emit('receive-private-message', { sender: data.sender, text: data.text });
     });
 
-    // Signal d'appel envoyé au destinataire
     socket.on('propose-call', (data) => {
         io.to(data.toSocketId).emit('incoming-call-request', { fromName: data.fromName, fromPeerId: data.fromPeerId });
     });
@@ -32,4 +31,4 @@ io.on('connection', (socket) => {
 });
 
 const PORT = process.env.PORT || 8080;
-http.listen(PORT, () => console.log(`Serveur prêt`));
+http.listen(PORT, () => console.log(`Serveur actif`));
