@@ -6,34 +6,40 @@ const path = require('path');
 
 app.use(express.static(__dirname));
 
-let usersInRooms = {};
+// Stockage des utilisateurs en mémoire
+let allUsers = [];
 
 io.on('connection', (socket) => {
-    console.log('Nouveau visiteur connectée id:', socket.id);
+    console.log('Connecté:', socket.id);
 
     socket.on('join-room', (data) => {
-        const { room, username } = data;
-        socket.join(room);
+        // On enregistre l'utilisateur avec son nom et son PeerID (vidéo)
+        const newUser = { 
+            id: socket.id, 
+            name: data.username, 
+            peerId: data.peerId 
+        };
+        allUsers.push(newUser);
         
-        if (!usersInRooms[room]) usersInRooms[room] = [];
-        
-        // On ajoute l'utilisateur
-        const newUser = { id: socket.id, name: username };
-        usersInRooms[room].push(newUser);
+        // On envoie la liste mise à jour à TOUT LE MONDE
+        io.emit('update-users', allUsers);
+        console.log(data.username + " a rejoint le live");
+    });
 
-        console.log(`${username} est à ${room}`);
-
-        // On envoie la liste mise à jour à tout le monde dans la ville
-        io.to(room).emit('update-users', usersInRooms[room]);
+    socket.on('send-message', (data) => {
+        // On renvoie le message à tout le monde immédiatement
+        io.emit('receive-message', data);
     });
 
     socket.on('disconnect', () => {
-        for (let room in usersInRooms) {
-            usersInRooms[room] = usersInRooms[room].filter(u => u.id !== socket.id);
-            io.to(room).emit('update-users', usersInRooms[room]);
-        }
+        allUsers = allUsers.filter(u => u.id !== socket.id);
+        io.emit('update-users', allUsers);
     });
 });
 
-const PORT = process.env.PORT || 3000;
-http.listen(PORT, () => console.log(`Serveur prêt sur le port ${PORT}`));
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+const PORT = process.env.PORT || 8080;
+http.listen(PORT, () => console.log(`Serveur actif sur port ${PORT}`));
