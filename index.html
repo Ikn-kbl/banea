@@ -3,100 +3,126 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BANEA FIX</title>
+    <title>BANEA ULTIMATE</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <script src="/socket.io/socket.io.js"></script>
     <style>
-        body { background: #000; color: #00d2ff; font-family: sans-serif; text-align: center; padding: 20px; }
-        input, button { padding: 12px; margin: 5px; border-radius: 5px; border: 1px solid #00d2ff; }
-        button { background: #00d2ff; color: black; font-weight: bold; cursor: pointer; }
-        #chatBox { height: 200px; border: 1px solid #333; margin: 10px auto; width: 90%; overflow-y: auto; background: #111; padding: 10px; }
-        video { width: 140px; background: #222; border: 1px solid #00d2ff; border-radius: 10px; }
+        body { background: #000; color: #00d2ff; font-family: sans-serif; text-align: center; margin: 0; padding: 10px; }
+        .box { border: 2px solid #00d2ff; padding: 15px; border-radius: 10px; margin-top: 10px; }
+        video { width: 45%; background: #222; border: 1px solid #00d2ff; border-radius: 10px; margin: 5px; height: 120px; object-fit: cover; }
+        #chat { height: 200px; border: 1px solid #333; overflow-y: auto; background: #111; margin: 10px 0; padding: 10px; text-align: left; font-size: 14px; }
+        input { padding: 10px; width: 60%; border-radius: 5px; border: none; }
+        button { padding: 10px; background: #00d2ff; color: #000; font-weight: bold; border: none; border-radius: 5px; cursor: pointer; }
+        .user-row { display: flex; justify-content: space-between; background: #1a1a1a; padding: 8px; margin-top: 5px; border-radius: 5px; }
     </style>
 </head>
 <body>
 
-    <h1>BANËA LIVE</h1>
+    <h2>BANËA V10</h2>
 
-    <div id="setup">
-        <input type="text" id="pseudo" placeholder="Ton pseudo...">
-        <button onclick="entrer()">ENTRER</button>
+    <div id="login-screen" class="box">
+        <input type="text" id="pseudoInput" placeholder="Ton pseudo...">
+        <button onclick="startApp()">ENTRER</button>
     </div>
 
-    <div id="main" style="display:none;">
-        <div style="display:flex; justify-content: center; gap: 10px;">
-            <video id="me" autoplay muted playsinline></video>
-            <video id="remote" autoplay playsinline></video>
+    <div id="main-screen" style="display:none;">
+        <div style="display:flex; justify-content: center;">
+            <video id="localVid" autoplay muted playsinline></video>
+            <video id="remoteVid" autoplay playsinline></video>
         </div>
 
-        <div id="chatBox"></div>
+        <div id="chat"></div>
         
-        <input type="text" id="msgInput" placeholder="Message...">
-        <button id="btnSend" onclick="envoyerMsg()">ENVOYER</button>
-        
-        <hr>
-        <div id="userList"></div>
+        <input type="text" id="msgInput" placeholder="Ton message...">
+        <button onclick="envoi()">ENVOYER</button>
+
+        <div id="userList" class="box"></div>
+        <button onclick="location.reload()" style="background:red; color:white; margin-top:20px;">QUITTER</button>
     </div>
 
     <script>
-        let socket, peer, monStream, monId;
-        const pseudoInput = document.getElementById('pseudo');
-        const msgInput = document.getElementById('msgInput');
+        let socket;
+        let peer;
+        let monStream;
+        let monNom;
 
-        function entrer() {
-            const name = pseudoInput.value;
-            if(!name) return alert("Choisis un pseudo");
+        // 1. DÉMARRAGE
+        function startApp() {
+            monNom = document.getElementById('pseudoInput').value;
+            if(!monNom) return alert("Mets un pseudo !");
 
-            document.getElementById('setup').style.display = 'none';
-            document.getElementById('main').style.display = 'block';
+            document.getElementById('login-screen').style.display = 'none';
+            document.getElementById('main-screen').style.display = 'block';
 
             // Initialisation Socket
             socket = io();
-            
-            // Initialisation Peer (Vidéo)
+
+            // Initialisation Vidéo (PeerJS)
             peer = new Peer();
-            peer.on('open', id => {
-                monId = id;
-                socket.emit('join-room', { room: 'global', username: name, peerId: id });
+
+            // Demander la caméra
+            navigator.mediaDevices.getUserMedia({video: true, audio: true})
+                .then(stream => {
+                    monStream = stream;
+                    document.getElementById('localVid').srcObject = stream;
+                    console.log("Caméra OK");
+                })
+                .catch(err => alert("Erreur Caméra : " + err));
+
+            // Quand PeerJS nous donne notre ID spécial d'appel
+            peer.on('open', (id) => {
+                console.log("Mon ID Peer : " + id);
+                socket.emit('join-room', { username: monNom, peerId: id });
             });
 
-            // Camera
-            navigator.mediaDevices.getUserMedia({video:true, audio:true}).then(s => {
-                monStream = s;
-                document.getElementById('me').srcObject = s;
-            }).catch(e => console.log("Camera refusée"));
-
-            // Reception
-            socket.on('receive-message', data => {
-                document.getElementById('chatBox').innerHTML += `<div><b>${data.user}:</b> ${data.text}</div>`;
+            // Recevoir un message
+            socket.on('receive-message', (data) => {
+                const chat = document.getElementById('chat');
+                chat.innerHTML += `<div><b style="color:yellow">${data.user}:</b> ${data.text}</div>`;
+                chat.scrollTop = chat.scrollHeight;
             });
 
-            socket.on('update-users', users => {
+            // Mettre à jour la liste des gens et les boutons APPELER
+            socket.on('update-users', (users) => {
                 const list = document.getElementById('userList');
-                list.innerHTML = "<h4>Membres :</h4>";
+                list.innerHTML = "<b>Connectés :</b>";
                 users.forEach(u => {
                     if(u.id !== socket.id) {
-                        list.innerHTML += `<div>${u.name} <button onclick="appeler('${u.peerId}')">APPELER</button></div>`;
+                        list.innerHTML += `
+                            <div class="user-row">
+                                <span>👤 ${u.name}</span>
+                                <button onclick="faireAppel('${u.peerId}')">APPELER</button>
+                            </div>`;
                     }
                 });
             });
 
-            peer.on('call', call => {
+            // Répondre automatiquement à un appel
+            peer.on('call', (call) => {
+                console.log("On reçoit un appel...");
                 call.answer(monStream);
-                call.on('stream', rs => document.getElementById('remote').srcObject = rs);
+                call.on('stream', (remoteStream) => {
+                    document.getElementById('remoteVid').srcObject = remoteStream;
+                });
             });
         }
 
-        function envoyerMsg() {
-            const text = msgInput.value;
-            if(!text) return;
-            socket.emit('send-message', { room: 'global', user: pseudoInput.value, text: text });
-            msgInput.value = "";
+        // 2. ENVOYER UN MESSAGE
+        function envoi() {
+            const input = document.getElementById('msgInput');
+            if(!input.value) return;
+            console.log("Envoi du message : " + input.value);
+            socket.emit('send-message', { user: monNom, text: input.value });
+            input.value = "";
         }
 
-        function appeler(pid) {
-            const call = peer.call(pid, monStream);
-            call.on('stream', rs => document.getElementById('remote').srcObject = rs);
+        // 3. PASSER UN APPEL
+        function faireAppel(remotePeerId) {
+            console.log("Appel de : " + remotePeerId);
+            const call = peer.call(remotePeerId, monStream);
+            call.on('stream', (remoteStream) => {
+                document.getElementById('remoteVid').srcObject = remoteStream;
+            });
         }
     </script>
 </body>
