@@ -3,154 +3,122 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>BANËA - Social Connect</title>
+    <title>BANËA PRO</title>
     <script src="/socket.io/socket.io.js"></script>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
     <style>
-        :root { --primary: #ff385c; --bg: #000; --card: #1c1c1e; --text: #ffffff; }
-        body { background: var(--bg); color: var(--text); font-family: 'Plus Jakarta Sans', sans-serif; margin: 0; padding: 0; overflow-x: hidden; }
+        :root { --primary: #ff385c; --bg: #000; --card: #1c1c1e; }
+        body { background: var(--bg); color: #fff; font-family: -apple-system, BlinkMacSystemFont, sans-serif; margin: 0; }
 
-        /* ALERTES MESSAGES */
-        #notif-bar { position: fixed; top: -100px; left: 50%; transform: translateX(-50%); width: 90%; max-width: 350px; background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(20px); padding: 12px; border-radius: 20px; z-index: 10000; display: flex; align-items: center; gap: 12px; border: 1px solid rgba(255,255,255,0.2); transition: 0.5s cubic-bezier(0.18, 0.89, 0.32, 1.28); }
-        #notif-bar.show { top: 20px; }
-
-        /* ECRAN D'ENTREE */
-        #login-screen { position: fixed; inset: 0; background: #000; z-index: 9000; display: flex; align-items: center; justify-content: center; padding: 20px; }
-        .login-box { background: #111; padding: 30px; border-radius: 30px; width: 100%; max-width: 350px; border: 1px solid #222; text-align: center; }
-        .photo-upload { width: 100px; height: 100px; border-radius: 50%; background: #222; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center; cursor: pointer; border: 2px dashed #444; overflow: hidden; position: relative; }
-        .photo-upload img { width: 100%; height: 100%; object-fit: cover; }
-        input, select { width: 100%; padding: 14px; margin: 8px 0; border-radius: 12px; border: 1px solid #333; background: #1a1a1a; color: #fff; box-sizing: border-box; }
-
-        /* GRILLE PRINCIPALE (CENTREE ET SYMETRIQUE) */
-        .container { max-width: 1000px; margin: 0 auto; padding: 20px; }
-        .header-logo { text-align: center; padding: 20px 0; font-weight: 800; font-size: 24px; color: var(--primary); letter-spacing: 2px; }
+        /* LOGIN SCREEN */
+        #login-screen { position: fixed; inset: 0; background: #000; z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 20px; }
+        .login-box { background: #111; padding: 30px; border-radius: 30px; width: 100%; max-width: 320px; text-align: center; border: 1px solid #222; }
+        input, select { width: 100%; padding: 12px; margin: 8px 0; border-radius: 12px; border: 1px solid #333; background: #1a1a1a; color: #fff; box-sizing: border-box; }
         
-        #userGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 20px; justify-content: center; }
+        /* GRILLE PRINCIPALE SYMETRIQUE */
+        .header { text-align: center; padding: 25px; font-weight: 800; font-size: 26px; color: var(--primary); letter-spacing: 1px; }
+        #userGrid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); 
+            gap: 15px; 
+            padding: 15px; 
+            max-width: 900px; 
+            margin: 0 auto; 
+            min-height: 200px; /* Force l'affichage */
+        }
         
-        .user-card { background: var(--card); border-radius: 20px; overflow: hidden; position: relative; aspect-ratio: 0.8; border: 1px solid #222; cursor: pointer; transition: transform 0.2s; }
-        .user-card:active { transform: scale(0.95); }
+        .user-card { 
+            background: var(--card); 
+            border-radius: 20px; 
+            overflow: hidden; 
+            position: relative; 
+            aspect-ratio: 1; 
+            border: 1px solid #333; 
+            cursor: pointer;
+            animation: fadeIn 0.5s ease;
+        }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
         .user-card img { width: 100%; height: 100%; object-fit: cover; }
-        .user-meta { position: absolute; bottom: 0; left: 0; right: 0; padding: 12px; background: linear-gradient(transparent, rgba(0,0,0,0.9)); }
-        .user-name { font-weight: 700; font-size: 15px; }
-        .user-age { font-size: 13px; opacity: 0.8; margin-left: 5px; }
+        .user-info { position: absolute; bottom: 0; left: 0; right: 0; padding: 10px; background: linear-gradient(transparent, rgba(0,0,0,0.9)); text-align: center; }
         
-        .msg-badge { position: absolute; top: 10px; right: 10px; background: var(--primary); color: white; width: 22px; height: 22px; border-radius: 50%; font-size: 12px; display: none; align-items: center; justify-content: center; font-weight: bold; box-shadow: 0 0 10px var(--primary); }
+        /* NOTIF FLASH */
+        #notif { position: fixed; top: -100px; left: 50%; transform: translateX(-50%); background: var(--primary); padding: 12px 25px; border-radius: 50px; z-index: 10000; transition: 0.5s; font-weight: bold; box-shadow: 0 5px 20px rgba(255, 56, 92, 0.4); }
 
         /* CHAT DRAWER */
-        #chat-drawer { position: fixed; bottom: -100%; left: 0; right: 0; height: 85vh; background: #121212; z-index: 8000; border-radius: 30px 30px 0 0; transition: 0.4s cubic-bezier(0.4, 0, 0.2, 1); display: flex; flex-direction: column; }
+        #chat-drawer { position: fixed; bottom: -100%; left: 0; right: 0; height: 85vh; background: #121212; z-index: 9000; border-radius: 25px 25px 0 0; transition: 0.4s ease; display: flex; flex-direction: column; }
         #chat-drawer.open { bottom: 0; }
-        .chat-top { padding: 20px; border-bottom: 1px solid #222; display: flex; justify-content: space-between; align-items: center; }
-        #msg-flow { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 10px; }
-        
-        .bbl { max-width: 75%; padding: 12px 16px; border-radius: 20px; font-size: 14px; }
-        .bbl.me { align-self: flex-end; background: var(--primary); border-bottom-right-radius: 4px; }
-        .bbl.you { align-self: flex-start; background: #2c2c2e; border-bottom-left-radius: 4px; }
-        .bbl img { width: 100%; border-radius: 12px; margin-top: 5px; }
-
-        .chat-input { padding: 20px; display: flex; gap: 10px; background: #121212; padding-bottom: 35px; }
-        
-        /* VIDEO */
-        #video-view { display: none; position: fixed; inset: 0; background: #000; z-index: 9500; }
-        #remote-v { width: 100%; height: 100%; object-fit: cover; }
-        #local-v { position: absolute; top: 30px; right: 20px; width: 110px; height: 160px; border-radius: 20px; border: 2px solid #fff; object-fit: cover; }
+        #msg-list { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 10px; }
+        .bubble { max-width: 70%; padding: 12px; border-radius: 15px; font-size: 14px; }
+        .bubble.me { align-self: flex-end; background: var(--primary); }
+        .bubble.you { align-self: flex-start; background: #333; }
+        .input-area { padding: 15px; display: flex; gap: 10px; background: #121212; padding-bottom: 30px; }
     </style>
 </head>
 <body>
 
-    <div id="notif-bar">
-        <div id="notif-content" style="font-size: 14px;"></div>
-    </div>
+    <div id="notif">Nouveau message !</div>
 
     <div id="login-screen">
         <div class="login-box">
-            <h1 style="color:var(--primary); margin:0 0 20px;">BANËA</h1>
-            <div class="photo-upload" onclick="document.getElementById('file-p').click()">
-                <img id="p-view" src="" style="display:none">
-                <span id="p-plus" style="font-size:30px; color:#444">+</span>
-            </div>
-            <input type="file" id="file-p" hidden accept="image/*" onchange="preview(this)">
-            <input type="text" id="in-name" placeholder="Nom ou Pseudo">
-            <input type="number" id="in-age" placeholder="Âge">
-            <select id="in-gen"><option value="Homme">Homme</option><option value="Femme">Femme</option></select>
-            <button onclick="start()" class="photo-upload" style="width:100%; height:auto; background:var(--primary); border:none; color:white; font-weight:bold; padding:15px; border-radius:15px; margin-top:10px;">SE CONNECTER</button>
+            <h1 style="color:var(--primary)">BANËA</h1>
+            <input type="text" id="name" placeholder="Prénom">
+            <input type="number" id="age" placeholder="Âge">
+            <select id="sex"><option value="Homme">Homme</option><option value="Femme">Femme</option></select>
+            <button onclick="connect()" style="width:100%; padding:15px; background:var(--primary); color:white; border:none; border-radius:12px; font-weight:bold; cursor:pointer; margin-top:10px;">REJOINDRE</button>
         </div>
     </div>
 
-    <div class="container">
-        <div class="header-logo">BANËA</div>
-        <div id="userGrid"></div>
-    </div>
+    <div class="header">BANËA</div>
+    <div id="userGrid">
+        </div>
 
     <div id="chat-drawer">
-        <div class="chat-top">
-            <div id="chat-title" style="font-weight:bold;">Nom</div>
-            <div style="display:flex; gap:15px;">
-                <button onclick="call()" style="background:none; border:none; color:#2ecc71; font-size:22px;">📞</button>
-                <button onclick="closeChat()" style="background:none; border:none; color:#fff; font-size:20px;">✕</button>
-            </div>
+        <div style="padding:15px; border-bottom:1px solid #222; display:flex; justify-content:space-between; align-items:center;">
+            <b id="chat-name">Nom</b>
+            <button onclick="closeChat()" style="background:none; border:none; color:white; font-size:20px;">✕</button>
         </div>
-        <div id="msg-flow"></div>
-        <div class="chat-input">
-            <button onclick="document.getElementById('file-i').click()" style="background:none; border:none; font-size:24px;">📷</button>
-            <input type="file" id="file-i" hidden accept="image/*" onchange="sendImg(this)">
-            <input type="text" id="msg-in" style="flex:1; background:#222; border:none; padding:12px; border-radius:15px; color:#fff;" placeholder="Aa">
-            <button onclick="sendTxt()" style="background:none; border:none; color:var(--primary); font-weight:bold;">➔</button>
+        <div id="msg-list"></div>
+        <div class="input-area">
+            <input type="text" id="m-in" style="flex:1; background:#222; border:none; padding:12px; border-radius:10px; color:white;" placeholder="Message...">
+            <button onclick="send()" style="background:none; border:none; color:var(--primary); font-weight:bold; font-size:18px;">➔</button>
         </div>
-    </div>
-
-    <div id="video-view">
-        <video id="remote-v" autoplay playsinline></video>
-        <video id="local-v" autoplay muted playsinline></video>
-        <button onclick="location.reload()" style="position:absolute; bottom:50px; left:50%; transform:translateX(-50%); background:red; border:none; width:70px; height:70px; border-radius:50%; color:white; font-size:30px;">📵</button>
     </div>
 
     <script>
-        let socket, peer, myStream, targetSid, targetPid, myPhoto = null, unread = {};
-        let logs = {};
+        let socket, peer, targetSid, logs = {};
 
-        function preview(input) {
-            const reader = new FileReader();
-            reader.onload = e => {
-                myPhoto = e.target.result;
-                document.getElementById('p-view').src = myPhoto;
-                document.getElementById('p-view').style.display = 'block';
-                document.getElementById('p-plus').style.display = 'none';
-            };
-            reader.readAsDataURL(input.files[0]);
-        }
-
-        function start() {
-            const name = document.getElementById('in-name').value;
-            const age = document.getElementById('in-age').value;
+        function connect() {
+            const name = document.getElementById('name').value;
+            const age = document.getElementById('age').value;
             if(!name || !age) return alert("Remplis tout !");
-            
+
             document.getElementById('login-screen').style.display = 'none';
             socket = io();
             peer = new Peer();
-            
+
             peer.on('open', id => {
                 socket.emit('join-room', { 
-                    username: name, age: age, 
-                    gender: document.getElementById('in-gen').value, 
-                    photo: myPhoto, peerId: id 
+                    username: name, 
+                    age: age, 
+                    gender: document.getElementById('sex').value, 
+                    peerId: id 
                 });
             });
 
             socket.on('update-users', users => {
                 const grid = document.getElementById('userGrid');
-                grid.innerHTML = "";
+                grid.innerHTML = ""; 
+                
                 users.forEach(u => {
                     if(u.id !== socket.id) {
                         const card = document.createElement('div');
                         card.className = "user-card";
-                        card.onclick = () => openChat(u.id, u.peerId, u.name);
+                        card.onclick = () => openChat(u.id, u.name);
                         card.innerHTML = `
                             <img src="${u.avatar}">
-                            <div class="msg-badge" id="b-${u.id}">${unread[u.id] || ''}</div>
-                            <div class="user-meta">
-                                <span class="user-name">${u.name},</span>
-                                <span class="user-age">${u.age}</span>
+                            <div class="user-info">
+                                <b>${u.name}, ${u.age}</b>
                             </div>`;
                         grid.appendChild(card);
                     }
@@ -163,80 +131,42 @@
                 logs[partner].push(data);
                 
                 if(partner === targetSid) render();
-                else {
-                    unread[partner] = (unread[partner] || 0) + 1;
-                    showNotif(data.sender + ": " + data.text);
-                    refreshBadges();
-                }
-            });
-
-            peer.on('call', async call => {
-                if(confirm("Appel entrant...")) {
-                    myStream = await navigator.mediaDevices.getUserMedia({video:true, audio:true});
-                    document.getElementById('video-view').style.display = 'block';
-                    document.getElementById('local-v').srcObject = myStream;
-                    call.answer(myStream);
-                    call.on('stream', rs => document.getElementById('remote-v').srcObject = rs);
-                }
+                else flash();
             });
         }
 
-        function showNotif(txt) {
-            const b = document.getElementById('notif-bar');
-            document.getElementById('notif-content').innerText = txt;
-            b.classList.add('show');
-            setTimeout(() => b.classList.remove('show'), 3000);
+        function flash() {
+            const n = document.getElementById('notif');
+            n.style.top = "20px";
+            setTimeout(() => n.style.top = "-100px", 3000);
         }
 
-        function openChat(sid, pid, name) {
-            targetSid = sid; targetPid = pid;
-            unread[sid] = 0;
-            refreshBadges();
-            document.getElementById('chat-title').innerText = name;
+        function openChat(sid, name) {
+            targetSid = sid;
+            document.getElementById('chat-name').innerText = name;
             document.getElementById('chat-drawer').classList.add('open');
             render();
         }
 
         function closeChat() { document.getElementById('chat-drawer').classList.remove('open'); targetSid = null; }
 
-        function refreshBadges() {
-            for(let id in unread) {
-                const b = document.getElementById('b-'+id);
-                if(b) { b.innerText = unread[id]; b.style.display = unread[id] > 0 ? 'flex' : 'none'; }
-            }
-        }
-
         function render() {
-            const box = document.getElementById('msg-flow');
+            const box = document.getElementById('msg-list');
             box.innerHTML = "";
             (logs[targetSid] || []).forEach(m => {
                 const d = document.createElement('div');
-                d.className = `bbl ${m.fromId === socket.id ? 'me' : 'you'}`;
-                d.innerHTML = m.type === 'image' ? `<img src="${m.text}">` : m.text;
+                d.className = `bubble ${m.fromId === socket.id ? 'me' : 'you'}`;
+                d.innerText = m.text;
                 box.appendChild(d);
             });
             box.scrollTop = box.scrollHeight;
         }
 
-        function sendTxt() {
-            const v = document.getElementById('msg-in').value;
-            if(!v) return;
-            socket.emit('send-private-message', { toSocketId: targetSid, text: v, type: 'text' });
-            document.getElementById('msg-in').value = "";
-        }
-
-        function sendImg(input) {
-            const r = new FileReader();
-            r.onload = () => socket.emit('send-private-message', { toSocketId: targetSid, text: r.result, type: 'image' });
-            r.readAsDataURL(input.files[0]);
-        }
-
-        async function call() {
-            myStream = await navigator.mediaDevices.getUserMedia({video:true, audio:true});
-            document.getElementById('video-view').style.display = 'block';
-            document.getElementById('local-v').srcObject = myStream;
-            const c = peer.call(targetPid, myStream);
-            c.on('stream', rs => document.getElementById('remote-v').srcObject = rs);
+        function send() {
+            const val = document.getElementById('m-in').value;
+            if(!val) return;
+            socket.emit('send-private-message', { toSocketId: targetSid, text: val });
+            document.getElementById('m-in').value = "";
         }
     </script>
 </body>
