@@ -10,14 +10,13 @@ let users = {};
 
 io.on('connection', (socket) => {
     socket.on('join-room', (data) => {
-        // Stockage du profil complet
         users[socket.id] = { 
             id: socket.id, 
             name: data.username, 
             age: data.age,
             gender: data.gender,
             peerId: data.peerId, 
-            avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${data.username}${data.age}` 
+            avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${data.username}` 
         };
         io.emit('update-users', Object.values(users));
     });
@@ -28,15 +27,20 @@ io.on('connection', (socket) => {
             text: data.text, 
             time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) 
         };
-        io.to(data.toSocketId).emit('receive-private-message', { ...msg, fromId: socket.id });
-        socket.emit('receive-private-message', { ...msg, fromId: socket.id });
+        io.to(data.toSocketId).emit('receive-private-message', msg);
+        socket.emit('receive-private-message', msg);
     });
 
     socket.on('propose-call', (data) => {
         io.to(data.toSocketId).emit('incoming-call-request', { 
             fromName: data.fromName, 
-            fromPeerId: data.fromPeerId 
+            fromPeerId: data.fromPeerId,
+            fromSocketId: socket.id
         });
+    });
+
+    socket.on('end-call', (data) => {
+        io.to(data.toSocketId).emit('call-ended-by-peer');
     });
 
     socket.on('disconnect', () => {
@@ -46,4 +50,5 @@ io.on('connection', (socket) => {
 });
 
 const PORT = process.env.PORT || 8080;
-http.listen(PORT, () => console.log('Server Profile Ready'));
+http.listen(PORT, () => console.log('Server V80 Ready'));
+
