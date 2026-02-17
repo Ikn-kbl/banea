@@ -3,179 +3,175 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>BANËA PREMIUM</title>
+    <title>BANËA SOCIAL</title>
     <script src="/socket.io/socket.io.js"></script>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
-        :root { --accent: #ff3b5c; --bg: #050505; --surface: #121214; --text: #f5f5f7; }
-        body { background: var(--bg); color: var(--text); font-family: 'Poppins', sans-serif; margin: 0; overflow: hidden; height: 100vh; }
+        :root { --main: #ff3b5c; --bg: #050505; --panel: rgba(28, 28, 30, 0.7); --border: rgba(255,255,255,0.1); }
+        body { background: var(--bg); color: #fff; font-family: 'Inter', sans-serif; margin: 0; overflow: hidden; height: 100vh; }
 
-        /* NOTIFICATION BANNER */
-        #notif-banner { position: fixed; top: -100px; left: 50%; transform: translateX(-50%); width: 90%; max-width: 400px; background: rgba(255,255,255,0.1); backdrop-filter: blur(25px); border: 1px solid rgba(255,255,255,0.1); padding: 15px; border-radius: 24px; z-index: 10000; display: flex; align-items: center; gap: 15px; transition: 0.6s cubic-bezier(0.2, 1, 0.2, 1); box-shadow: 0 20px 40px rgba(0,0,0,0.4); }
-        #notif-banner.active { top: 20px; }
-
-        /* GRID LAYOUT */
-        .main-content { height: 100vh; overflow-y: auto; padding: 20px; box-sizing: border-box; }
-        .user-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 16px; max-width: 1200px; margin: 0 auto; }
-        .user-card { background: var(--surface); border-radius: 28px; overflow: hidden; position: relative; aspect-ratio: 0.8; border: 1px solid #222; cursor: pointer; transition: 0.4s; }
-        .user-card:hover { transform: translateY(-8px); border-color: var(--accent); }
-        .user-card img { width: 100%; height: 100%; object-fit: cover; }
-        .card-overlay { position: absolute; bottom: 0; left: 0; right: 0; height: 50%; background: linear-gradient(transparent, rgba(0,0,0,0.9)); display: flex; align-items: flex-end; padding: 15px; }
-
-        /* CHAT WINDOW SLIM & PRO */
-        #chat-pane { position: fixed; inset: 0; background: var(--bg); z-index: 9000; display: none; flex-direction: column; transform: translateY(100%); transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
-        #chat-pane.active { display: flex; transform: translateY(0); }
-        .chat-header { padding: 20px; border-bottom: 1px solid #222; display: flex; align-items: center; justify-content: space-between; background: rgba(10,10,11,0.8); backdrop-filter: blur(10px); }
+        /* GLASSMORPHISM UI */
+        .glass { backdrop-filter: blur(20px); background: var(--panel); border: 1px solid var(--border); }
         
-        #messages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 8px; }
-        .msg { max-width: 75%; padding: 12px 18px; border-radius: 22px; font-size: 14px; line-height: 1.5; }
-        .msg.me { align-self: flex-end; background: var(--accent); color: #fff; border-bottom-right-radius: 4px; }
-        .msg.you { align-self: flex-start; background: #262629; border-bottom-left-radius: 4px; }
+        /* LAYOUT */
+        .app-shell { display: flex; height: 100vh; width: 100vw; }
+        
+        /* SIDEBAR (LISTE D'AMIS) */
+        .sidebar { width: 350px; border-right: 1px solid var(--border); display: flex; flex-direction: column; transition: 0.3s; }
+        .sidebar-header { padding: 25px; font-size: 24px; font-weight: 800; color: var(--main); }
+        .user-list { flex: 1; overflow-y: auto; padding: 10px; }
+        .user-item { display: flex; align-items: center; gap: 15px; padding: 12px; border-radius: 18px; cursor: pointer; transition: 0.2s; margin-bottom: 5px; }
+        .user-item:hover { background: rgba(255,255,255,0.05); }
+        .avatar { width: 50px; height: 50px; border-radius: 50%; object-fit: cover; background: #222; }
 
-        .input-bar { padding: 15px 20px 35px; display: flex; gap: 10px; align-items: center; background: var(--bg); }
-        .input-field { flex: 1; background: #1c1c1e; border: 1px solid #333; padding: 14px 20px; border-radius: 30px; color: #fff; outline: none; font-size: 15px; transition: 0.3s; }
-        .input-field:focus { border-color: var(--accent); }
-        .send-btn { background: var(--accent); border: none; width: 48px; height: 48px; border-radius: 50%; color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: 0.3s; }
+        /* CHAT AREA */
+        .chat-area { flex: 1; display: flex; flex-direction: column; background: url('https://w0.peakpx.com/wallpaper/596/633/HD-wallpaper-whatsapp-dark-patterns-black-texture.jpg'); background-size: contain; }
+        .chat-header { height: 70px; display: flex; align-items: center; justify-content: space-between; padding: 0 25px; }
+        
+        #messages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 10px; }
+        .msg { max-width: 65%; padding: 12px 16px; border-radius: 20px; font-size: 14px; position: relative; line-height: 1.4; box-shadow: 0 2px 10px rgba(0,0,0,0.2); }
+        .msg.me { align-self: flex-end; background: var(--main); color: white; border-bottom-right-radius: 4px; }
+        .msg.you { align-self: flex-start; background: #262629; color: white; border-bottom-left-radius: 4px; }
+        .msg img { width: 100%; border-radius: 12px; margin-top: 5px; }
+        .msg-time { font-size: 10px; opacity: 0.6; display: block; text-align: right; margin-top: 4px; }
 
-        /* VIDEO CALL OVERLAY */
-        #call-screen { display: none; position: fixed; inset: 0; background: #000; z-index: 10001; }
+        /* INPUT BAR */
+        .input-bar { padding: 20px; display: flex; gap: 12px; align-items: center; background: rgba(10,10,11,0.9); }
+        .input-pill { flex: 1; background: #1c1c1e; border: 1px solid #333; padding: 14px 20px; border-radius: 30px; color: #fff; outline: none; }
+        
+        /* LOGIN MODAL */
+        #auth { position: fixed; inset: 0; background: #000; z-index: 10000; display: flex; align-items: center; justify-content: center; }
+        .auth-card { width: 320px; text-align: center; }
+
+        /* VIDEO CALL */
+        #video-view { display: none; position: fixed; inset: 0; background: #000; z-index: 9999; }
         #remote-v { width: 100%; height: 100%; object-fit: cover; }
-        #local-v { position: absolute; top: 40px; right: 20px; width: 100px; height: 160px; border-radius: 20px; border: 2px solid rgba(255,255,255,0.3); object-fit: cover; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-        .call-tools { position: absolute; bottom: 50px; left: 50%; transform: translateX(-50%); display: flex; gap: 20px; }
-        .tool-btn { width: 60px; height: 60px; border-radius: 50%; border: none; display: flex; align-items: center; justify-content: center; font-size: 20px; cursor: pointer; backdrop-filter: blur(10px); }
-        .tool-hangup { background: #ff3b30; color: #fff; }
-        .tool-alt { background: rgba(255,255,255,0.15); color: #fff; }
+        #local-v { position: absolute; top: 30px; right: 20px; width: 120px; height: 180px; border-radius: 20px; border: 2px solid #fff; object-fit: cover; }
 
-        /* LOGIN SCREEN */
-        #login-screen { position: fixed; inset: 0; background: #000; z-index: 20000; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 30px; }
-        .login-card { background: var(--surface); padding: 40px; border-radius: 35px; width: 100%; max-width: 340px; text-align: center; border: 1px solid #222; }
+        @media (max-width: 768px) {
+            .sidebar { width: 100%; position: absolute; z-index: 5; }
+            .sidebar.hidden { transform: translateX(-100%); }
+            .chat-area { width: 100%; }
+        }
     </style>
 </head>
 <body>
 
-    <div id="notif-banner">
-        <div id="notif-avatar" style="width:45px; height:45px; background:var(--accent); border-radius:50%;"></div>
-        <div style="flex:1">
-            <div id="notif-name" style="font-weight:600; font-size:14px;">Nom</div>
-            <div id="notif-text" style="font-size:13px; opacity:0.6;">Nouveau message</div>
+    <div id="auth">
+        <div class="auth-card">
+            <h1 style="color:var(--main); font-size:42px; margin:0;">BANËA</h1>
+            <p style="opacity:0.5; margin-bottom:40px;">Social & Video Discovery</p>
+            <input type="text" id="username" class="input-pill" style="width:100%; margin-bottom:15px;" placeholder="Ton prénom">
+            <button onclick="login()" style="width:100%; padding:15px; border-radius:30px; border:none; background:var(--main); color:white; font-weight:bold; cursor:pointer;">REJOINDRE</button>
         </div>
     </div>
 
-    <div id="login-screen">
-        <div class="login-card">
-            <h1 style="color:var(--accent); margin:0 0 5px; font-size:32px;">BANËA</h1>
-            <p style="opacity:0.4; font-size:13px; margin-bottom:30px;">ULTIMATE EDITION</p>
-            <input type="text" id="in-name" class="input-field" style="width:100%; box-sizing:border-box; margin-bottom:12px;" placeholder="Ton Prénom">
-            <input type="number" id="in-age" class="input-field" style="width:100%; box-sizing:border-box; margin-bottom:20px;" placeholder="Ton Âge">
-            <button onclick="boot()" class="send-btn" style="width:100%; border-radius:15px; font-weight:600;">COMMENCER</button>
+    <div class="app-shell">
+        <div class="sidebar glass" id="sidebar">
+            <div class="sidebar-header">Messages</div>
+            <div class="user-list" id="user-list">
+                </div>
+        </div>
+
+        <div class="chat-area">
+            <div class="chat-header glass">
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <button onclick="toggleSidebar()" style="background:none; border:none; color:white; font-size:20px;" class="mobile-only">☰</button>
+                    <b id="chat-title">Choisis une discussion</b>
+                </div>
+                <div id="call-btns" style="display:none; gap:15px;">
+                    <button onclick="startCall()" style="background:none; border:none; font-size:20px;">📞</button>
+                    <button onclick="block()" style="background:none; border:none; font-size:20px;">🚫</button>
+                </div>
+            </div>
+
+            <div id="messages"></div>
+
+            <div class="input-bar glass">
+                <button onclick="document.getElementById('img-in').click()" style="background:none; border:none; font-size:22px;">🖼️</button>
+                <input type="file" id="img-in" hidden accept="image/*" onchange="sendImage(this)">
+                <input type="text" id="msg-input" class="input-pill" placeholder="Écrire...">
+                <button onclick="send()" style="background:none; border:none; color:var(--main); font-weight:bold; font-size:18px;">➔</button>
+            </div>
         </div>
     </div>
 
-    <div class="main-content">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:30px; max-width:1200px; margin: 0 auto 30px;">
-            <h2 style="font-size:26px;">Découvrir</h2>
-            <div style="width:10px; height:10px; background:#30d158; border-radius:50%; box-shadow: 0 0 10px #30d158;"></div>
-        </div>
-        <div id="userGrid" class="user-grid"></div>
-    </div>
-
-    <div id="chat-pane">
-        <div class="chat-header">
-            <button onclick="closeChat()" style="background:none; border:none; color:#fff; font-size:20px;">✕</button>
-            <b id="target-name" style="font-size:17px;">Nom</b>
-            <button onclick="startCall()" style="background:none; border:none; color:var(--accent); font-size:22px;">🎥</button>
-        </div>
-        <div id="messages"></div>
-        <div class="input-bar">
-            <input type="text" id="m-input" class="input-field" placeholder="Écrire un message...">
-            <button onclick="send()" class="send-btn">➔</button>
-        </div>
-    </div>
-
-    <div id="call-screen">
+    <div id="video-view">
         <video id="remote-v" autoplay playsinline></video>
         <video id="local-v" autoplay muted playsinline></video>
-        <div class="call-tools">
-            <button class="tool-btn tool-alt" onclick="toggleMute()">🎤</button>
-            <button class="tool-btn tool-hangup" onclick="endCall()">📵</button>
-            <button class="tool-btn tool-alt" onclick="location.reload()">🔄</button>
-        </div>
+        <button onclick="endCall()" style="position:absolute; bottom:50px; left:50%; transform:translateX(-50%); background:red; border:none; padding:15px 30px; border-radius:30px; color:white; font-weight:bold;">RACCROCHER</button>
     </div>
 
     <script>
-        let socket, peer, localStream, currentCall, targetSid, targetPid, logs = {};
+        let socket, peer, myUid, myStream, targetSid, targetPid, logs = {};
 
-        function boot() {
-            const n = document.getElementById('in-name').value;
-            const a = document.getElementById('in-age').value;
-            if(!n || !a) return;
-            document.getElementById('login-screen').style.display = 'none';
+        // 1. GESTION DE L'HISTORIQUE (LocalStorage)
+        function saveLog(uid, msg) {
+            if(!logs[uid]) logs[uid] = [];
+            logs[uid].push(msg);
+            localStorage.setItem(`banea_logs_${myUid}`, JSON.stringify(logs));
+        }
+
+        function loadLogs() {
+            const saved = localStorage.getItem(`banea_logs_${myUid}`);
+            if(saved) logs = JSON.parse(saved);
+        }
+
+        // 2. INITIALISATION
+        function login() {
+            const name = document.getElementById('username').value;
+            if(!name) return;
+            
+            myUid = 'user_' + Math.random().toString(36).substr(2, 9);
+            document.getElementById('auth').style.display = 'none';
+            loadLogs();
+
             socket = io();
             peer = new Peer();
 
             peer.on('open', id => {
-                socket.emit('join-room', { username: n, age: a, peerId: id });
+                socket.emit('join-room', { username: name, uid: myUid, peerId: id });
             });
 
             socket.on('update-users', users => {
-                const grid = document.getElementById('userGrid');
-                grid.innerHTML = "";
+                const list = document.getElementById('user-list');
+                list.innerHTML = "";
                 users.forEach(u => {
                     if(u.id !== socket.id) {
-                        const card = document.createElement('div');
-                        card.className = "user-card";
-                        card.onclick = () => openChat(u.id, u.peerId, u.name);
-                        card.innerHTML = `<img src="${u.avatar}"><div class="card-overlay"><b>${u.name}, ${u.age}</b></div>`;
-                        grid.appendChild(card);
+                        const div = document.createElement('div');
+                        div.className = "user-item";
+                        div.onclick = () => openChat(u);
+                        div.innerHTML = `<img src="${u.avatar}" class="avatar"><div><b>${u.name}</b><br><small style="color:#30d158">En ligne</small></div>`;
+                        list.appendChild(div);
                     }
                 });
             });
 
-            socket.on('receive-private-message', data => {
-                const partner = (data.fromId === socket.id) ? targetSid : data.fromId;
-                if(!logs[partner]) logs[partner] = [];
-                logs[partner].push(data);
-                if(partner === targetSid) render();
-                else flashNotif(data);
+            socket.on('receive-message', data => {
+                const partner = (data.fromUid === myUid) ? targetSid : data.fromId; 
+                saveLog(partner, data);
+                if(targetSid === partner) render();
             });
 
             peer.on('call', async call => {
-                if(confirm("Appel de " + call.peer + " ?")) {
-                    localStream = await navigator.mediaDevices.getUserMedia({
-                        video: { aspectRatio: 9/16 },
-                        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
-                    });
-                    document.getElementById('call-screen').style.display = 'block';
-                    document.getElementById('local-v').srcObject = localStream;
-                    call.answer(localStream);
-                    currentCall = call;
+                if(confirm("Appel vidéo entrant...")) {
+                    myStream = await navigator.mediaDevices.getUserMedia({video:true, audio:{echoCancellation:true}});
+                    document.getElementById('video-view').style.display = 'block';
+                    document.getElementById('local-v').srcObject = myStream;
+                    call.answer(myStream);
                     call.on('stream', rs => document.getElementById('remote-v').srcObject = rs);
                 }
             });
         }
 
-        function flashNotif(data) {
-            const b = document.getElementById('notif-banner');
-            document.getElementById('notif-name').innerText = data.sender;
-            document.getElementById('notif-text').innerText = data.text;
-            b.classList.add('active');
-            setTimeout(() => b.classList.remove('active'), 4000);
-        }
-
-        function openChat(sid, pid, name) {
-            targetSid = sid; targetPid = pid;
-            document.getElementById('target-name').innerText = name;
-            const pane = document.getElementById('chat-pane');
-            pane.style.display = 'flex';
-            setTimeout(() => pane.classList.add('active'), 10);
+        // 3. MESSAGERIE
+        function openChat(user) {
+            targetSid = user.id;
+            targetPid = user.peerId;
+            document.getElementById('chat-title').innerText = user.name;
+            document.getElementById('call-btns').style.display = 'flex';
+            if(window.innerWidth < 768) toggleSidebar();
             render();
-        }
-
-        function closeChat() {
-            const pane = document.getElementById('chat-pane');
-            pane.classList.remove('active');
-            setTimeout(() => pane.style.display = 'none', 400);
         }
 
         function render() {
@@ -183,35 +179,45 @@
             box.innerHTML = "";
             (logs[targetSid] || []).forEach(m => {
                 const d = document.createElement('div');
-                d.className = `msg ${m.fromId === socket.id ? 'me' : 'you'}`;
-                d.innerText = m.text;
+                d.className = `msg ${m.fromUid === myUid ? 'me' : 'you'}`;
+                d.innerHTML = m.type === 'image' ? `<img src="${m.text}">` : m.text;
+                d.innerHTML += `<span class="msg-time">${m.time}</span>`;
                 box.appendChild(d);
             });
             box.scrollTop = box.scrollHeight;
         }
 
         function send() {
-            const i = document.getElementById('m-input');
-            if(!i.value) return;
-            socket.emit('send-private-message', { toSocketId: targetSid, text: i.value });
-            i.value = "";
+            const val = document.getElementById('msg-input').value;
+            if(!val) return;
+            socket.emit('send-message', { toSocketId: targetSid, fromUid: myUid, text: val, type: 'text' });
+            document.getElementById('msg-input').value = "";
         }
 
+        function sendImage(input) {
+            const reader = new FileReader();
+            reader.onload = () => {
+                socket.emit('send-message', { toSocketId: targetSid, fromUid: myUid, text: reader.result, type: 'image' });
+            };
+            reader.readAsDataURL(input.files[0]);
+        }
+
+        // 4. VIDÉO & FILTRES
         async function startCall() {
-            localStream = await navigator.mediaDevices.getUserMedia({
-                video: { aspectRatio: 9/16 },
-                audio: { echoCancellation: true, noiseSuppression: true }
-            });
-            document.getElementById('call-screen').style.display = 'block';
-            document.getElementById('local-v').srcObject = localStream;
-            currentCall = peer.call(targetPid, localStream);
-            currentCall.on('stream', rs => document.getElementById('remote-v').srcObject = rs);
+            myStream = await navigator.mediaDevices.getUserMedia({video:true, audio:{echoCancellation:true}});
+            document.getElementById('video-view').style.display = 'block';
+            document.getElementById('local-v').srcObject = myStream;
+            const call = peer.call(targetPid, myStream);
+            call.on('stream', rs => document.getElementById('remote-v').srcObject = rs);
         }
 
         function endCall() {
-            if(currentCall) currentCall.close();
-            if(localStream) localStream.getTracks().forEach(t => t.stop());
-            document.getElementById('call-screen').style.display = 'none';
+            document.getElementById('video-view').style.display = 'none';
+            if(myStream) myStream.getTracks().forEach(t => t.stop());
+        }
+
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('hidden');
         }
     </script>
 </body>
