@@ -13,20 +13,15 @@ io.on('connection', (socket) => {
             id: socket.id, 
             name: data.username, 
             age: data.age,
-            gender: data.gender,
             peerId: data.peerId, 
             avatar: data.photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${data.username}`,
-            likes: 0
+            status: 'online'
         };
         io.emit('update-users', Object.values(users));
     });
 
-    socket.on('send-like', (id) => {
-        if(users[id]) { users[id].likes++; io.emit('update-users', Object.values(users)); }
-    });
-
     socket.on('send-private-message', (data) => {
-        const msg = { fromId: socket.id, sender: users[socket.id].name, text: data.text, type: data.type };
+        const msg = { fromId: socket.id, sender: users[socket.id].name, text: data.text, time: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) };
         io.to(data.toSocketId).emit('receive-private-message', msg);
         socket.emit('receive-private-message', msg);
     });
@@ -34,5 +29,4 @@ io.on('connection', (socket) => {
     socket.on('disconnect', () => { delete users[socket.id]; io.emit('update-users', Object.values(users)); });
 });
 
-http.listen(8080, () => console.log('BANËA - IZAN EDITION READY'));
-
+http.listen(8080, () => console.log('BANËA PRO ENGINE - READY'));
