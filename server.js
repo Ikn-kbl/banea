@@ -1,24 +1,22 @@
 const express = require('express');
 const app = express();
 const http = require('http').createServer(app);
-const io = require('socket.io')(http, { cors: { origin: "*" } });
+const io = require('socket.io')(http);
 
-const users = new Map();
+app.use(express.static(__dirname));
+
+let users = {};
 
 io.on('connection', (socket) => {
-    socket.on('join', (user) => {
-        users.set(socket.id, { ...user, id: socket.id });
-        io.emit('roster', Array.from(users.values()));
-    });
-
-    socket.on('signal', (data) => {
-        io.to(data.to).emit('signal', { from: socket.id, signal: data.signal });
+    socket.on('join', (data) => {
+        users[socket.id] = { id: socket.id, name: data.name, peerId: data.peerId };
+        io.emit('users', Object.values(users));
     });
 
     socket.on('disconnect', () => {
-        users.delete(socket.id);
-        io.emit('roster', Array.from(users.values()));
+        delete users[socket.id];
+        io.emit('users', Object.values(users));
     });
 });
 
-http.listen(8080, () => console.log('CORE ENGINE ACTIVE'));
+http.listen(8080, () => console.log('SERVEUR BANËA OK SUR PORT 8080'));
