@@ -3,103 +3,109 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>BANËA OFFICIAL</title>
+    <title>BANËA PREMIUM</title>
     <script src="/socket.io/socket.io.js"></script>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <style>
-        :root { --primary: #ff385c; --accent: #00f2ff; --bg: #000; --card: #111; }
-        body { background: var(--bg); color: #fff; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; height: 100vh; overflow: hidden; }
+        :root { --primary: #ff385c; --bg: #000; --card: #1c1c1e; --accent: #30d158; }
+        body { background: var(--bg); color: #fff; font-family: 'Inter', sans-serif; margin: 0; height: 100vh; overflow: hidden; }
+
+        /* NOTIFICATIONS FLASH */
+        #notification-bar { position: fixed; top: -100px; left: 50%; transform: translateX(-50%); width: 90%; max-width: 400px; background: rgba(44, 44, 46, 0.95); backdrop-filter: blur(10px); padding: 15px; border-radius: 20px; z-index: 10000; display: flex; align-items: center; gap: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); transition: 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); border: 1px solid rgba(255,255,255,0.1); }
+        #notification-bar.show { top: 20px; }
+
+        /* LOGIN SCREEN */
+        #login-screen { position: fixed; inset: 0; background: #000; z-index: 9000; display: flex; align-items: center; justify-content: center; }
+        .login-card { background: var(--card); padding: 40px; border-radius: 35px; width: 320px; text-align: center; border: 1px solid #333; }
+        .btn-start { background: var(--primary); color: white; border: none; padding: 16px; width: 100%; border-radius: 15px; font-weight: bold; cursor: pointer; margin-top: 20px; font-size: 16px; }
+
+        /* USER LIST STYLE TINDER */
+        #userList { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; padding: 20px; overflow-y: auto; height: 100vh; padding-bottom: 100px; }
+        .u-card { background: var(--card); border-radius: 25px; overflow: hidden; position: relative; aspect-ratio: 3/4; border: 1px solid #333; cursor: pointer; }
+        .u-card img { width: 100%; height: 100%; object-fit: cover; }
+        .u-info { position: absolute; bottom: 0; left: 0; right: 0; padding: 15px; background: linear-gradient(transparent, rgba(0,0,0,0.9)); }
+        .u-name { font-weight: bold; font-size: 18px; }
+        .u-badge { position: absolute; top: 15px; right: 15px; background: var(--primary); color: white; padding: 5px 10px; border-radius: 12px; font-size: 12px; font-weight: bold; display: none; box-shadow: 0 0 15px var(--primary); }
+
+        /* CHAT DRAWER (S'ouvre du bas) */
+        #chat-window { position: fixed; bottom: -100%; left: 0; right: 0; height: 90vh; background: #161617; z-index: 8000; transition: 0.4s ease; border-radius: 30px 30px 0 0; display: flex; flex-direction: column; }
+        #chat-window.open { bottom: 0; }
+        .chat-header { padding: 20px; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center; }
         
-        /* LOGIN */
-        #login-screen { position: fixed; inset: 0; background: #000; z-index: 5000; display: flex; align-items: center; justify-content: center; }
-        .login-box { background: var(--card); padding: 30px; border-radius: 25px; width: 300px; text-align: center; border: 1px solid #222; }
-        input, select { width: 100%; padding: 12px; margin: 10px 0; border-radius: 10px; border: none; background: #222; color: #fff; outline: none; }
+        #messages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+        .bubble { max-width: 75%; padding: 12px 16px; border-radius: 20px; font-size: 15px; line-height: 1.4; position: relative; }
+        .bubble.me { align-self: flex-end; background: #007aff; color: white; border-bottom-right-radius: 5px; }
+        .bubble.you { align-self: flex-start; background: #3a3a3c; color: white; border-bottom-left-radius: 5px; }
+        .bubble img { max-width: 100%; border-radius: 12px; margin-top: 5px; }
 
-        /* LISTE PROFILS */
-        #userList { display: flex; gap: 15px; padding: 15px; overflow-x: auto; background: #000; border-bottom: 1px solid #222; scrollbar-width: none; }
-        .u-card { min-width: 80px; text-align: center; cursor: pointer; position: relative; transition: 0.3s; }
-        .u-card img { width: 60px; height: 60px; border-radius: 50%; border: 2px solid transparent; object-fit: cover; }
-        .u-card.active img { border-color: var(--accent); transform: scale(1.1); }
-        .u-card.has-chat::after { content: ''; position: absolute; top: 2px; right: 12px; width: 12px; height: 12px; background: var(--accent); border-radius: 50%; border: 2px solid #000; }
-        .likes-count { font-size: 10px; color: var(--primary); font-weight: bold; }
+        .chat-input { padding: 20px; display: flex; gap: 10px; background: #161617; align-items: center; }
+        .input-box { flex: 1; background: #2c2c2e; border: none; padding: 15px; border-radius: 25px; color: white; outline: none; }
 
-        /* ZONE CHAT */
-        #chat-area { flex: 1; display: none; flex-direction: column; background: #080808; position: relative; }
-        #messages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 10px; }
-        .msg { max-width: 75%; padding: 12px; border-radius: 18px; font-size: 14px; line-height: 1.4; animation: pop 0.2s ease; }
-        @keyframes pop { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
-        .msg.me { align-self: flex-end; background: var(--primary); border-bottom-right-radius: 4px; }
-        .msg.you { align-self: flex-start; background: #262626; border-bottom-left-radius: 4px; }
-        .msg img { width: 100%; border-radius: 10px; margin-top: 5px; }
-
-        /* OVERLAY CONFIRMATION */
-        #confirm-box { display: none; position: absolute; top: 0; left: 0; right: 0; background: var(--primary); padding: 10px; text-align: center; z-index: 10; font-size: 13px; font-weight: bold; }
-
-        /* BARRE D'ACTIONS */
-        .bar { display: flex; align-items: center; gap: 10px; padding: 15px; background: #111; border-top: 1px solid #222; }
-        .btn-icon { background: none; border: none; color: #fff; cursor: pointer; font-size: 20px; padding: 5px; }
-        .btn-call { background: #22c55e; border-radius: 50%; width: 45px; height: 45px; display: none; }
-
-        /* VIDEO */
-        #video-ui { display: none; position: fixed; inset: 0; background: #000; z-index: 4000; }
+        /* APPEL VIDÉO */
+        #video-screen { display: none; position: fixed; inset: 0; background: #000; z-index: 9500; }
         #remote-v { width: 100%; height: 100%; object-fit: cover; }
-        #local-v { position: absolute; top: 20px; right: 20px; width: 100px; height: 150px; border-radius: 15px; border: 2px solid var(--accent); object-fit: cover; z-index: 4001; }
-        .btn-hangup { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); background: #ff3b3b; border: none; width: 70px; height: 70px; border-radius: 50%; color: #fff; font-size: 30px; cursor: pointer; }
+        #local-v { position: absolute; top: 40px; right: 20px; width: 100px; height: 150px; border-radius: 15px; border: 2px solid white; object-fit: cover; }
+        .btn-hangup { position: absolute; bottom: 50px; left: 50%; transform: translateX(-50%); background: #ff3b30; border: none; width: 75px; height: 75px; border-radius: 50%; font-size: 30px; color: white; cursor: pointer; }
     </style>
 </head>
 <body>
 
+    <div id="notification-bar">
+        <img id="notif-avatar" src="" style="width:45px; height:45px; border-radius:50%;">
+        <div style="flex:1">
+            <div id="notif-name" style="font-weight:bold; font-size:14px;"></div>
+            <div id="notif-text" style="font-size:13px; opacity:0.8; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; width:200px;"></div>
+        </div>
+    </div>
+
     <div id="login-screen">
-        <div class="login-box">
-            <h1 style="color:var(--primary); margin:0 0 20px;">BANËA</h1>
-            <input type="text" id="nick" placeholder="Ton Pseudo">
+        <div class="login-card">
+            <h1 style="color:var(--primary); margin:0 0 10px;">BANËA</h1>
+            <p style="font-size:12px; opacity:0.6; margin-bottom:20px;">Rencontres Instantanées</p>
+            <input type="text" id="nick" placeholder="Ton prénom...">
             <select id="gender"><option value="Homme">Homme</option><option value="Femme">Femme</option></select>
-            <button onclick="join()" style="width:100%; padding:15px; background:var(--primary); border:none; border-radius:12px; color:#fff; font-weight:bold; cursor:pointer; margin-top:10px;">COMMENCER</button>
+            <button class="btn-start" onclick="initApp()">C'EST PARTI</button>
         </div>
     </div>
 
     <div id="userList"></div>
 
-    <div id="chat-area">
-        <div id="confirm-box">
-            <span id="confirm-txt"></span> 
-            <button onclick="acceptChat()" style="background:#fff; color:#000; border:none; padding:5px 10px; border-radius:5px; margin-left:10px; cursor:pointer;">ACCEPTER</button>
+    <div id="chat-window">
+        <div class="chat-header">
+            <div id="chat-target-name" style="font-weight:bold; font-size:18px;">Nom</div>
+            <div style="display:flex; gap:15px;">
+                <button onclick="startCall()" style="background:none; border:none; color:var(--accent); font-size:22px; cursor:pointer;">📞</button>
+                <button onclick="closeChat()" style="background:none; border:none; color:#fff; font-size:20px; cursor:pointer;">✕</button>
+            </div>
         </div>
-        
         <div id="messages"></div>
-
-        <div class="bar">
-            <button class="btn-icon" onclick="like()">❤️</button>
-            <button id="callBtn" class="btn-icon btn-call" onclick="initCall()">📞</button>
-            <button class="btn-icon" style="color:#ff3b3b" onclick="blockUser()">🚫</button>
-            <input type="text" id="msgIn" placeholder="Message..." style="flex:1; background:#222; border:none; padding:12px; border-radius:10px; color:#fff;">
-            <button class="btn-icon" onclick="document.getElementById('imgIn').click()">📷</button>
+        <div class="chat-input">
+            <button onclick="document.getElementById('imgIn').click()" style="background:none; border:none; font-size:24px; cursor:pointer;">📷</button>
             <input type="file" id="imgIn" hidden accept="image/*" onchange="sendImg(this)">
-            <button class="btn-icon" onclick="sendTxt()" style="color:var(--accent)">➔</button>
+            <input type="text" id="msgIn" class="input-box" placeholder="Message...">
+            <button onclick="sendTxt()" style="background:none; border:none; color:#007aff; font-weight:bold; font-size:16px; cursor:pointer;">ENVOYER</button>
         </div>
     </div>
 
-    <div id="video-ui">
+    <div id="video-screen">
         <video id="remote-v" autoplay playsinline></video>
         <video id="local-v" autoplay muted playsinline></video>
         <button class="btn-hangup" onclick="location.reload()">📵</button>
     </div>
 
     <script>
-        let socket, peer, myStream, targetSid, targetPid, myName, myPeerId;
-        let chatLogs = {}; 
-        let confirmedChats = []; 
+        let socket, peer, myStream, targetSid, targetPid, unread = {};
+        let chatLogs = {};
 
-        function join() {
+        function initApp() {
             const n = document.getElementById('nick').value;
             if(!n) return;
-            myName = n;
             document.getElementById('login-screen').style.display = 'none';
             socket = io();
             peer = new Peer();
             
             peer.on('open', id => {
-                myPeerId = id;
                 socket.emit('join-room', { username: n, gender: document.getElementById('gender').value, peerId: id });
             });
 
@@ -109,9 +115,15 @@
                 users.forEach(u => {
                     if(u.id !== socket.id) {
                         const card = document.createElement('div');
-                        card.className = `u-card ${chatLogs[u.id] ? 'has-chat' : ''} ${targetSid === u.id ? 'active' : ''}`;
-                        card.innerHTML = `<img src="${u.avatar}"><div class="likes-count">❤️ ${u.likes}</div><div style="font-size:11px;">${u.name}</div>`;
-                        card.onclick = () => openChat(u.id, u.peerId, u.name);
+                        card.className = "u-card";
+                        card.onclick = () => openChat(u.id, u.peerId, u.name, u.avatar);
+                        card.innerHTML = `
+                            <img src="${u.avatar}">
+                            <div class="u-badge" id="badge-${u.id}">${unread[u.id] || ''}</div>
+                            <div class="u-info">
+                                <div class="u-name">${u.name}</div>
+                                <div style="font-size:11px; opacity:0.7">En ligne</div>
+                            </div>`;
                         list.appendChild(card);
                     }
                 });
@@ -121,23 +133,21 @@
                 const partner = (data.fromId === socket.id) ? targetSid : data.fromId;
                 if(!chatLogs[partner]) chatLogs[partner] = [];
                 chatLogs[partner].push(data);
-                
+
                 if(partner === targetSid) {
                     render();
-                    checkConfirmation(data);
+                } else {
+                    // ALERTE MESSAGE VISIBLE
+                    unread[partner] = (unread[partner] || 0) + 1;
+                    showFlashNotif(data.sender, data.text, data.fromId);
+                    updateBadges();
                 }
-                socket.emit('update-users-list'); 
-            });
-
-            socket.on('chat-confirmed', data => {
-                confirmedChats.push(data.by);
-                if(data.by === targetSid) document.getElementById('callBtn').style.display = 'block';
             });
 
             peer.on('call', async call => {
-                if(confirm("Appel vidéo entrant. Répondre ?")) {
+                if(confirm("Appel entrant... Répondre ?")) {
                     myStream = await navigator.mediaDevices.getUserMedia({video:true, audio:true});
-                    document.getElementById('video-ui').style.display = 'block';
+                    document.getElementById('video-screen').style.display = 'block';
                     document.getElementById('local-v').srcObject = myStream;
                     call.answer(myStream);
                     call.on('stream', rs => document.getElementById('remote-v').srcObject = rs);
@@ -145,34 +155,33 @@
             });
         }
 
-        function openChat(sid, pid, name) {
+        function showFlashNotif(name, text, id) {
+            const bar = document.getElementById('notification-bar');
+            document.getElementById('notif-name').innerText = name;
+            document.getElementById('notif-text').innerText = text;
+            bar.classList.add('show');
+            setTimeout(() => bar.classList.remove('show'), 4000);
+        }
+
+        function openChat(sid, pid, name, avatar) {
             targetSid = sid; targetPid = pid;
-            document.getElementById('chat-area').style.display = 'flex';
-            document.getElementById('callBtn').style.display = confirmedChats.includes(sid) ? 'block' : 'none';
+            unread[sid] = 0;
+            updateBadges();
+            document.getElementById('chat-target-name').innerText = name;
+            document.getElementById('chat-window').classList.add('open');
             render();
-            
-            // Si on a reçu un message mais pas encore accepté
-            const history = chatLogs[sid] || [];
-            if(history.length > 0 && history[history.length-1].fromId !== socket.id && !confirmedChats.includes(sid)) {
-                document.getElementById('confirm-box').style.display = 'block';
-                document.getElementById('confirm-txt').innerText = "Accepter la discussion de " + name + " ?";
-            } else {
-                document.getElementById('confirm-box').style.display = 'none';
-            }
         }
 
-        function checkConfirmation(msg) {
-            if(msg.fromId !== socket.id && !confirmedChats.includes(targetSid)) {
-                document.getElementById('confirm-box').style.display = 'block';
-                document.getElementById('confirm-txt').innerText = "Accepter la discussion ?";
-            }
-        }
+        function closeChat() { document.getElementById('chat-window').classList.remove('open'); targetSid = null; }
 
-        function acceptChat() {
-            confirmedChats.push(targetSid);
-            socket.emit('accept-chat-request', { toSocketId: targetSid });
-            document.getElementById('confirm-box').style.display = 'none';
-            document.getElementById('callBtn').style.display = 'block';
+        function updateBadges() {
+            for (let id in unread) {
+                const b = document.getElementById('badge-' + id);
+                if(b) {
+                    b.innerText = unread[id];
+                    b.style.display = unread[id] > 0 ? 'block' : 'none';
+                }
+            }
         }
 
         function render() {
@@ -180,7 +189,7 @@
             box.innerHTML = "";
             (chatLogs[targetSid] || []).forEach(m => {
                 const d = document.createElement('div');
-                d.className = `msg ${m.fromId === socket.id ? 'me' : 'you'}`;
+                d.className = `bubble ${m.fromId === socket.id ? 'me' : 'you'}`;
                 d.innerHTML = m.type === 'image' ? `<img src="${m.text}">` : m.text;
                 box.appendChild(d);
             });
@@ -189,7 +198,7 @@
 
         function sendTxt() {
             const v = document.getElementById('msgIn').value;
-            if(!v || !targetSid) return;
+            if(!v) return;
             socket.emit('send-private-message', { toSocketId: targetSid, text: v, type: 'text' });
             document.getElementById('msgIn').value = "";
         }
@@ -200,20 +209,12 @@
             reader.readAsDataURL(input.files[0]);
         }
 
-        function like() { socket.emit('send-like', targetSid); }
-
-        function blockUser() {
-            alert("Utilisateur bloqué.");
-            document.getElementById('chat-area').style.display = 'none';
-            targetSid = null;
-        }
-
-        async function initCall() {
+        async function startCall() {
             myStream = await navigator.mediaDevices.getUserMedia({video:true, audio:true});
-            document.getElementById('video-ui').style.display = 'block';
+            document.getElementById('video-screen').style.display = 'block';
             document.getElementById('local-v').srcObject = myStream;
-            const call = peer.call(targetPid, myStream);
-            call.on('stream', rs => document.getElementById('remote-v').srcObject = rs);
+            const c = peer.call(targetPid, myStream);
+            c.on('stream', rs => document.getElementById('remote-v').srcObject = rs);
         }
     </script>
 </body>
