@@ -14,40 +14,19 @@ io.on('connection', (socket) => {
             name: data.username, 
             gender: data.gender,
             peerId: data.peerId, 
-            avatar: data.photo || `https://api.dicebear.com/7.x/${data.gender === 'Homme' ? 'bottts' : 'avataaars'}/svg?seed=${data.username}`,
+            avatar: `https://api.dicebear.com/7.x/${data.gender === 'Homme' ? 'bottts' : 'avataaars'}/svg?seed=${data.username}`,
             likes: 0
         };
         io.emit('update-users', Object.values(users));
     });
 
-    socket.on('send-like', (targetId) => {
-        if (users[targetId]) {
-            users[targetId].likes++;
-            io.emit('update-users', Object.values(users));
-        }
-    });
-
     socket.on('send-private-message', (data) => {
-        const msg = { 
-            fromId: socket.id, 
-            sender: users[socket.id].name,
-            text: data.text, 
-            type: data.type, 
-            time: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) 
-        };
+        const msg = { fromId: socket.id, sender: users[socket.id].name, text: data.text, type: data.type, time: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) };
         io.to(data.toSocketId).emit('receive-private-message', msg);
         socket.emit('receive-private-message', msg);
     });
 
-    socket.on('accept-chat-request', (data) => {
-        io.to(data.toSocketId).emit('chat-confirmed', { by: socket.id });
-    });
-
-    socket.on('disconnect', () => {
-        delete users[socket.id];
-        io.emit('update-users', Object.values(users));
-    });
+    socket.on('disconnect', () => { delete users[socket.id]; io.emit('update-users', Object.values(users)); });
 });
 
-const PORT = process.env.PORT || 8080;
-http.listen(PORT, () => console.log('BANËA FINAL V120 - Online'));
+http.listen(8080, () => console.log('BANËA V-PREMIUM ON'));
