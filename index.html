@@ -2,45 +2,161 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <title>BANËA V50 - VERROU TOTAL</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BANËA V55</title>
     <style>
-        body { background: #000; color: white; text-align: center; font-family: sans-serif; padding-top: 50px; }
-        .btn { background: #00d2ff; color: black; padding: 15px 30px; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; }
-        #app-content { display: none; }
+        body { background: #0b0e11; color: white; font-family: sans-serif; margin: 0; height: 100vh; display: flex; flex-direction: column; }
+        #start-screen { padding: 50px; text-align: center; }
+        #main-app { display: none; flex: 1; flex-direction: column; }
+        
+        /* Liste des gens en haut */
+        #userList { background: #111b21; padding: 10px; overflow-x: auto; white-space: nowrap; border-bottom: 1px solid #333; }
+        .user-btn { display: inline-block; background: #202c33; padding: 10px 15px; margin-right: 8px; border-radius: 20px; cursor: pointer; border: 1px solid #444; }
+        .user-btn.active { border-color: #00d2ff; color: #00d2ff; }
+
+        /* Zone de messages */
+        #chat-box { flex: 1; overflow-y: auto; padding: 15px; background: #0b0e11; display: flex; flex-direction: column; }
+        .msg { margin-bottom: 10px; padding: 10px; border-radius: 10px; max-width: 80%; word-wrap: break-word; }
+        .received { background: #202c33; align-self: flex-start; border: 1px solid #333; }
+        .sent { background: #005c4b; align-self: flex-end; border: 1px solid #00a884; }
+
+        #vid-zone { display: none; justify-content: center; gap: 10px; padding: 10px; background: #000; }
+        video { width: 140px; height: 140px; border-radius: 10px; object-fit: cover; border: 2px solid #00d2ff; }
+        
+        #input-area { display: flex; padding: 10px; background: #111b21; gap: 5px; }
+        input { flex: 1; background: #2a3942; border: none; padding: 12px; color: white; border-radius: 5px; }
+        .btn { background: #00a884; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        
+        /* Pop-up Appel */
+        #call-popup { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #1c2a33; padding: 25px; border-radius: 15px; text-align: center; border: 2px solid #00d2ff; z-index: 1000; }
     </style>
 </head>
 <body>
 
     <div id="start-screen">
-        <h1>BANËA V50</h1>
-        <p>Le système est verrouillé. Rien ne s'activera sans ton clic.</p>
-        <button class="btn" onclick="chargerLogiciel()">DÉVERROUILLER & ENTRER</button>
+        <h1 style="color:#00d2ff">BANËA</h1>
+        <p>Entrez votre pseudo pour commencer</p>
+        <input type="text" id="pseudoInput" placeholder="Votre nom..." style="display:block; margin: 20px auto; width: 200px;">
+        <button class="btn" onclick="lancerApp()">ENTRER</button>
     </div>
 
-    <div id="app-content">
-        <p>Chargement des modules de sécurité...</p>
-        <div id="zone-chat"></div>
+    <div id="main-app">
+        <div id="userList"></div>
+        
+        <div id="vid-zone">
+            <video id="localVid" autoplay muted playsinline></video>
+            <video id="remoteVid" autoplay playsinline></video>
+        </div>
+
+        <div id="chat-box"></div>
+
+        <div id="input-area">
+            <input type="text" id="msgInput" placeholder="Écrire un message...">
+            <button class="btn" onclick="envoyer()">ENVOYER</button>
+            <button id="btnAppel" style="background:#00d2ff; color:black; display:none;" class="btn" onclick="demanderAppel()">APPELER</button>
+        </div>
     </div>
+
+    <div id="call-popup">
+        <h3 id="callerName">Appel...</h3>
+        <button class="btn" id="btnAccepter">ACCEPTER</button>
+        <button class="btn" style="background:red;" onclick="this.parentElement.style.display='none'">REFUSER</button>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
 
     <script>
-        // Cette fonction est la SEULE qui peut charger les outils de caméra
-        function chargerLogiciel() {
+        let socket, peer, monStream = null, monNom, targetSid, targetPid;
+
+        function lancerApp() {
+            monNom = document.getElementById('pseudoInput').value;
+            if(!monNom) return alert("Pseudo requis");
+
             document.getElementById('start-screen').style.display = 'none';
-            document.getElementById('app-content').style.display = 'block';
+            document.getElementById('main-app').style.display = 'flex';
 
-            // On injecte les scripts UNIQUEMENT maintenant
-            const s1 = document.createElement('script');
-            s1.src = "/socket.io/socket.io.js";
-            document.head.appendChild(s1);
+            socket = io();
+            peer = new Peer();
 
-            const s2 = document.createElement('script');
-            s2.src = "https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js";
-            document.head.appendChild(s2);
+            peer.on('open', (id) => {
+                socket.emit('join-room', { username: monNom, peerId: id });
+            });
 
-            s2.onload = () => {
-                alert("Système prêt. Caméra toujours éteinte.");
-                // Ici tu peux remettre la logique de connexion socket
-            };
+            // RÉCEPTION DES MESSAGES (Correction ici)
+            socket.on('receive-private-message', (data) => {
+                const box = document.getElementById('chat-box');
+                const type = (data.sender === monNom) ? 'sent' : 'received';
+                box.innerHTML += `<div class="msg ${type}"><b>${data.sender}:</b> ${data.text}</div>`;
+                box.scrollTop = box.scrollHeight;
+            });
+
+            socket.on('update-users', (users) => {
+                const list = document.getElementById('userList');
+                list.innerHTML = "";
+                users.forEach(u => {
+                    if(u.id !== socket.id) {
+                        const b = document.createElement('div');
+                        b.className = 'user-btn';
+                        b.innerText = "👤 " + u.name;
+                        b.onclick = () => {
+                            targetSid = u.id; targetPid = u.peerId;
+                            document.querySelectorAll('.user-btn').forEach(x => x.classList.remove('active'));
+                            b.classList.add('active');
+                            document.getElementById('btnAppel').style.display = 'block';
+                        };
+                        list.appendChild(b);
+                    }
+                });
+            });
+
+            socket.on('incoming-call-request', (data) => {
+                document.getElementById('call-popup').style.display = 'block';
+                document.getElementById('callerName').innerText = data.fromName + " vous appelle";
+                document.getElementById('btnAccepter').onclick = () => repondreAppel(data.fromPeerId);
+            });
+
+            peer.on('call', (call) => {
+                if(monStream) {
+                    call.answer(monStream);
+                    call.on('stream', (rs) => {
+                        document.getElementById('vid-zone').style.display = 'flex';
+                        document.getElementById('remoteVid').srcObject = rs;
+                    });
+                }
+            });
+        }
+
+        async function allumerCam() {
+            try {
+                monStream = await navigator.mediaDevices.getUserMedia({video:true, audio:true});
+                document.getElementById('localVid').srcObject = monStream;
+                document.getElementById('vid-zone').style.display = 'flex';
+                return true;
+            } catch(e) { alert("Caméra bloquée"); return false; }
+        }
+
+        async function demanderAppel() {
+            const ok = await allumerCam();
+            if(ok) {
+                socket.emit('propose-call', { toSocketId: targetSid, fromName: monNom, fromPeerId: peer.id });
+                const call = peer.call(targetPid, monStream);
+                call.on('stream', (rs) => {
+                    document.getElementById('remoteVid').srcObject = rs;
+                });
+            }
+        }
+
+        async function repondreAppel() {
+            document.getElementById('call-popup').style.display = 'none';
+            await allumerCam();
+        }
+
+        function envoyer() {
+            const txt = document.getElementById('msgInput').value;
+            if(!txt || !targetSid) return;
+            socket.emit('send-private-message', { toSocketId: targetSid, sender: monNom, text: txt });
+            document.getElementById('msgInput').value = "";
         }
     </script>
 </body>
