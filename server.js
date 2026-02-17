@@ -14,14 +14,13 @@ io.on('connection', (socket) => {
             name: data.username, 
             age: data.age,
             peerId: data.peerId, 
-            avatar: data.photo || `https://api.dicebear.com/7.x/avataaars/svg?seed=${data.username}`,
-            status: 'online'
+            avatar: data.photo || `https://api.dicebear.com/7.x/big-smile/svg?seed=${data.username}`
         };
         io.emit('update-users', Object.values(users));
     });
 
     socket.on('send-private-message', (data) => {
-        const msg = { fromId: socket.id, sender: users[socket.id].name, text: data.text, time: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) };
+        const msg = { fromId: socket.id, sender: users[socket.id].name, text: data.text };
         io.to(data.toSocketId).emit('receive-private-message', msg);
         socket.emit('receive-private-message', msg);
     });
@@ -29,4 +28,4 @@ io.on('connection', (socket) => {
     socket.on('disconnect', () => { delete users[socket.id]; io.emit('update-users', Object.values(users)); });
 });
 
-http.listen(8080, () => console.log('BANËA PRO ENGINE - READY'));
+http.listen(8080, () => console.log('ENGINE ONLINE'));
