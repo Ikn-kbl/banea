@@ -3,90 +3,104 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>BANËA PURE</title>
+    <title>BANËA OFFICIAL</title>
     <script src="/socket.io/socket.io.js"></script>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
-        :root { --primary: #ff385c; --bg: #000; --card: #111; }
-        body { background: var(--bg); color: #fff; font-family: sans-serif; margin: 0; height: 100vh; display: flex; flex-direction: column; }
+        :root { --primary: #ff385c; --accent: #00f2ff; --bg: #000; --card: #111; }
+        body { background: var(--bg); color: #fff; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; height: 100vh; overflow: hidden; }
         
         /* LOGIN */
-        #login { position: fixed; inset: 0; background: #000; z-index: 100; display: flex; align-items: center; justify-content: center; }
-        .box { background: #111; padding: 30px; border-radius: 20px; text-align: center; width: 300px; border: 1px solid #333; }
-        input, select { width: 100%; padding: 12px; margin: 10px 0; border-radius: 8px; border: none; background: #222; color: #fff; box-sizing: border-box; }
-        
-        /* LISTE PROFILS (OBJECTIF PRINCIPAL) */
-        #userList { display: flex; gap: 15px; padding: 15px; overflow-x: auto; background: #000; border-bottom: 1px solid #222; }
-        .u-card { min-width: 80px; text-align: center; cursor: pointer; position: relative; }
-        .u-card img { width: 60px; height: 60px; border-radius: 50%; border: 2px solid transparent; }
-        .u-card.active img { border-color: var(--primary); }
-        .u-card.has-chat::after { content: ''; position: absolute; top: 0; right: 10px; width: 12px; height: 12px; background: #00f2ff; border-radius: 50%; border: 2px solid #000; }
-        .likes { font-size: 10px; color: var(--primary); }
+        #login-screen { position: fixed; inset: 0; background: #000; z-index: 5000; display: flex; align-items: center; justify-content: center; }
+        .login-box { background: var(--card); padding: 30px; border-radius: 25px; width: 300px; text-align: center; border: 1px solid #222; }
+        input, select { width: 100%; padding: 12px; margin: 10px 0; border-radius: 10px; border: none; background: #222; color: #fff; outline: none; }
 
-        /* DISCUSSION (S'OUVRE SEULEMENT AU CLIC) */
-        #chat-area { flex: 1; display: none; flex-direction: column; background: #080808; }
-        #messages { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 8px; }
-        .msg { max-width: 75%; padding: 10px 14px; border-radius: 15px; font-size: 14px; line-height: 1.4; }
-        .msg.me { align-self: flex-end; background: var(--primary); }
-        .msg.you { align-self: flex-start; background: #222; }
+        /* LISTE PROFILS */
+        #userList { display: flex; gap: 15px; padding: 15px; overflow-x: auto; background: #000; border-bottom: 1px solid #222; scrollbar-width: none; }
+        .u-card { min-width: 80px; text-align: center; cursor: pointer; position: relative; transition: 0.3s; }
+        .u-card img { width: 60px; height: 60px; border-radius: 50%; border: 2px solid transparent; object-fit: cover; }
+        .u-card.active img { border-color: var(--accent); transform: scale(1.1); }
+        .u-card.has-chat::after { content: ''; position: absolute; top: 2px; right: 12px; width: 12px; height: 12px; background: var(--accent); border-radius: 50%; border: 2px solid #000; }
+        .likes-count { font-size: 10px; color: var(--primary); font-weight: bold; }
+
+        /* ZONE CHAT */
+        #chat-area { flex: 1; display: none; flex-direction: column; background: #080808; position: relative; }
+        #messages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 10px; }
+        .msg { max-width: 75%; padding: 12px; border-radius: 18px; font-size: 14px; line-height: 1.4; animation: pop 0.2s ease; }
+        @keyframes pop { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+        .msg.me { align-self: flex-end; background: var(--primary); border-bottom-right-radius: 4px; }
+        .msg.you { align-self: flex-start; background: #262626; border-bottom-left-radius: 4px; }
         .msg img { width: 100%; border-radius: 10px; margin-top: 5px; }
 
-        /* CONTROLES */
-        .bar { display: flex; gap: 10px; padding: 12px; background: #111; align-items: center; }
-        .btn { background: none; border: none; color: #fff; cursor: pointer; font-size: 20px; }
-        
-        /* VIDEO PLEIN ECRAN */
-        #video-screen { display: none; position: fixed; inset: 0; background: #000; z-index: 50; }
+        /* OVERLAY CONFIRMATION */
+        #confirm-box { display: none; position: absolute; top: 0; left: 0; right: 0; background: var(--primary); padding: 10px; text-align: center; z-index: 10; font-size: 13px; font-weight: bold; }
+
+        /* BARRE D'ACTIONS */
+        .bar { display: flex; align-items: center; gap: 10px; padding: 15px; background: #111; border-top: 1px solid #222; }
+        .btn-icon { background: none; border: none; color: #fff; cursor: pointer; font-size: 20px; padding: 5px; }
+        .btn-call { background: #22c55e; border-radius: 50%; width: 45px; height: 45px; display: none; }
+
+        /* VIDEO */
+        #video-ui { display: none; position: fixed; inset: 0; background: #000; z-index: 4000; }
         #remote-v { width: 100%; height: 100%; object-fit: cover; }
-        #local-v { position: absolute; top: 20px; right: 20px; width: 100px; height: 140px; border-radius: 10px; border: 2px solid #fff; object-fit: cover; }
+        #local-v { position: absolute; top: 20px; right: 20px; width: 100px; height: 150px; border-radius: 15px; border: 2px solid var(--accent); object-fit: cover; z-index: 4001; }
+        .btn-hangup { position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%); background: #ff3b3b; border: none; width: 70px; height: 70px; border-radius: 50%; color: #fff; font-size: 30px; cursor: pointer; }
     </style>
 </head>
 <body>
 
-    <div id="login">
-        <div class="box">
-            <h1 style="color:var(--primary); margin:0;">BANËA</h1>
-            <input type="text" id="nick" placeholder="Pseudo">
-            <select id="gen"><option value="Homme">Homme</option><option value="Femme">Femme</option></select>
-            <button onclick="enter()" style="width:100%; padding:15px; background:var(--primary); color:#fff; border:none; border-radius:8px; font-weight:bold; cursor:pointer;">ENTRER</button>
+    <div id="login-screen">
+        <div class="login-box">
+            <h1 style="color:var(--primary); margin:0 0 20px;">BANËA</h1>
+            <input type="text" id="nick" placeholder="Ton Pseudo">
+            <select id="gender"><option value="Homme">Homme</option><option value="Femme">Femme</option></select>
+            <button onclick="join()" style="width:100%; padding:15px; background:var(--primary); border:none; border-radius:12px; color:#fff; font-weight:bold; cursor:pointer; margin-top:10px;">COMMENCER</button>
         </div>
     </div>
 
     <div id="userList"></div>
 
     <div id="chat-area">
-        <div class="bar" style="border-bottom: 1px solid #222;">
-            <button class="btn" onclick="like()">❤️</button>
-            <button class="btn" onclick="call()">📞 Appel Video</button>
-            <button class="btn" style="color:red; font-size:14px;" onclick="closeChat()">[Fermer]</button>
+        <div id="confirm-box">
+            <span id="confirm-txt"></span> 
+            <button onclick="acceptChat()" style="background:#fff; color:#000; border:none; padding:5px 10px; border-radius:5px; margin-left:10px; cursor:pointer;">ACCEPTER</button>
         </div>
+        
         <div id="messages"></div>
+
         <div class="bar">
-            <button class="btn" onclick="document.getElementById('imgIn').click()">📷</button>
+            <button class="btn-icon" onclick="like()">❤️</button>
+            <button id="callBtn" class="btn-icon btn-call" onclick="initCall()">📞</button>
+            <button class="btn-icon" style="color:#ff3b3b" onclick="blockUser()">🚫</button>
+            <input type="text" id="msgIn" placeholder="Message..." style="flex:1; background:#222; border:none; padding:12px; border-radius:10px; color:#fff;">
+            <button class="btn-icon" onclick="document.getElementById('imgIn').click()">📷</button>
             <input type="file" id="imgIn" hidden accept="image/*" onchange="sendImg(this)">
-            <input type="text" id="msgIn" placeholder="Message..." style="flex:1; background:#222; border:none; padding:10px; border-radius:8px; color:#fff;">
-            <button class="btn" onclick="sendTxt()">➔</button>
+            <button class="btn-icon" onclick="sendTxt()" style="color:var(--accent)">➔</button>
         </div>
     </div>
 
-    <div id="video-screen">
+    <div id="video-ui">
         <video id="remote-v" autoplay playsinline></video>
         <video id="local-v" autoplay muted playsinline></video>
-        <button onclick="location.reload()" style="position:absolute; bottom:30px; left:50%; transform:translateX(-50%); background:red; border:none; width:60px; height:60px; border-radius:50%; color:#fff; font-size:25px;">📵</button>
+        <button class="btn-hangup" onclick="location.reload()">📵</button>
     </div>
 
     <script>
-        let socket, peer, myStream, targetSid, targetPid, myPeerId, chatLogs = {};
+        let socket, peer, myStream, targetSid, targetPid, myName, myPeerId;
+        let chatLogs = {}; 
+        let confirmedChats = []; 
 
-        function enter() {
+        function join() {
             const n = document.getElementById('nick').value;
             if(!n) return;
-            document.getElementById('login').style.display = 'none';
+            myName = n;
+            document.getElementById('login-screen').style.display = 'none';
             socket = io();
             peer = new Peer();
+            
             peer.on('open', id => {
                 myPeerId = id;
-                socket.emit('join-room', { username: n, gender: document.getElementById('gen').value, peerId: id });
+                socket.emit('join-room', { username: n, gender: document.getElementById('gender').value, peerId: id });
             });
 
             socket.on('update-users', users => {
@@ -94,11 +108,11 @@
                 list.innerHTML = "";
                 users.forEach(u => {
                     if(u.id !== socket.id) {
-                        const div = document.createElement('div');
-                        div.className = `u-card ${chatLogs[u.id] ? 'has-chat' : ''} ${targetSid === u.id ? 'active' : ''}`;
-                        div.innerHTML = `<img src="${u.avatar}"><div class="likes">❤️ ${u.likes}</div><div style="font-size:11px;">${u.name}</div>`;
-                        div.onclick = () => openChat(u.id, u.peerId);
-                        list.appendChild(div);
+                        const card = document.createElement('div');
+                        card.className = `u-card ${chatLogs[u.id] ? 'has-chat' : ''} ${targetSid === u.id ? 'active' : ''}`;
+                        card.innerHTML = `<img src="${u.avatar}"><div class="likes-count">❤️ ${u.likes}</div><div style="font-size:11px;">${u.name}</div>`;
+                        card.onclick = () => openChat(u.id, u.peerId, u.name);
+                        list.appendChild(card);
                     }
                 });
             });
@@ -107,14 +121,23 @@
                 const partner = (data.fromId === socket.id) ? targetSid : data.fromId;
                 if(!chatLogs[partner]) chatLogs[partner] = [];
                 chatLogs[partner].push(data);
-                if(partner === targetSid) render();
+                
+                if(partner === targetSid) {
+                    render();
+                    checkConfirmation(data);
+                }
                 socket.emit('update-users-list'); 
             });
 
+            socket.on('chat-confirmed', data => {
+                confirmedChats.push(data.by);
+                if(data.by === targetSid) document.getElementById('callBtn').style.display = 'block';
+            });
+
             peer.on('call', async call => {
-                if(confirm("Appel entrant. Accepter ?")) {
+                if(confirm("Appel vidéo entrant. Répondre ?")) {
                     myStream = await navigator.mediaDevices.getUserMedia({video:true, audio:true});
-                    document.getElementById('video-screen').style.display = 'block';
+                    document.getElementById('video-ui').style.display = 'block';
                     document.getElementById('local-v').srcObject = myStream;
                     call.answer(myStream);
                     call.on('stream', rs => document.getElementById('remote-v').srcObject = rs);
@@ -122,15 +145,34 @@
             });
         }
 
-        function openChat(sid, pid) {
+        function openChat(sid, pid, name) {
             targetSid = sid; targetPid = pid;
             document.getElementById('chat-area').style.display = 'flex';
+            document.getElementById('callBtn').style.display = confirmedChats.includes(sid) ? 'block' : 'none';
             render();
+            
+            // Si on a reçu un message mais pas encore accepté
+            const history = chatLogs[sid] || [];
+            if(history.length > 0 && history[history.length-1].fromId !== socket.id && !confirmedChats.includes(sid)) {
+                document.getElementById('confirm-box').style.display = 'block';
+                document.getElementById('confirm-txt').innerText = "Accepter la discussion de " + name + " ?";
+            } else {
+                document.getElementById('confirm-box').style.display = 'none';
+            }
         }
 
-        function closeChat() {
-            document.getElementById('chat-area').style.display = 'none';
-            targetSid = null;
+        function checkConfirmation(msg) {
+            if(msg.fromId !== socket.id && !confirmedChats.includes(targetSid)) {
+                document.getElementById('confirm-box').style.display = 'block';
+                document.getElementById('confirm-txt').innerText = "Accepter la discussion ?";
+            }
+        }
+
+        function acceptChat() {
+            confirmedChats.push(targetSid);
+            socket.emit('accept-chat-request', { toSocketId: targetSid });
+            document.getElementById('confirm-box').style.display = 'none';
+            document.getElementById('callBtn').style.display = 'block';
         }
 
         function render() {
@@ -160,12 +202,18 @@
 
         function like() { socket.emit('send-like', targetSid); }
 
-        async function call() {
+        function blockUser() {
+            alert("Utilisateur bloqué.");
+            document.getElementById('chat-area').style.display = 'none';
+            targetSid = null;
+        }
+
+        async function initCall() {
             myStream = await navigator.mediaDevices.getUserMedia({video:true, audio:true});
-            document.getElementById('video-screen').style.display = 'block';
+            document.getElementById('video-ui').style.display = 'block';
             document.getElementById('local-v').srcObject = myStream;
-            const c = peer.call(targetPid, myStream);
-            c.on('stream', rs => document.getElementById('remote-v').srcObject = rs);
+            const call = peer.call(targetPid, myStream);
+            call.on('stream', rs => document.getElementById('remote-v').srcObject = rs);
         }
     </script>
 </body>
