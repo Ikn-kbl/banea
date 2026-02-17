@@ -3,221 +3,189 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>BANËA SOCIAL</title>
+    <title>BANËA ULTRA</title>
     <script src="/socket.io/socket.io.js"></script>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
-        :root { --main: #ff3b5c; --bg: #050505; --panel: rgba(28, 28, 30, 0.7); --border: rgba(255,255,255,0.1); }
-        body { background: var(--bg); color: #fff; font-family: 'Inter', sans-serif; margin: 0; overflow: hidden; height: 100vh; }
+        :root { --accent: #ff3b5c; --glass: rgba(255, 255, 255, 0.05); }
+        body, html { margin: 0; padding: 0; background: #000; color: #fff; font-family: 'Inter', system-ui; height: 100%; overflow: hidden; }
 
-        /* GLASSMORPHISM UI */
-        .glass { backdrop-filter: blur(20px); background: var(--panel); border: 1px solid var(--border); }
+        /* INTERFACE AZAR STYLE - FULL VIDEO BACKGROUND */
+        #main-view { position: relative; height: 100vh; width: 100vw; display: flex; }
         
-        /* LAYOUT */
-        .app-shell { display: flex; height: 100vh; width: 100vw; }
+        /* VIDEO RENDERERS */
+        .video-container { position: absolute; inset: 0; z-index: 1; background: #0a0a0a; }
+        video { width: 100%; height: 100%; object-fit: cover; filter: contrast(1.1) brightness(1.1); }
+        #local-video { 
+            position: absolute; top: 20px; right: 20px; width: 120px; height: 180px; 
+            z-index: 10; border-radius: 20px; border: 1px solid rgba(255,255,255,0.2);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5); transform: scaleX(-1);
+        }
+
+        /* GLASS UI PANELS */
+        .overlay { 
+            position: absolute; inset: 0; z-index: 5; pointer-events: none;
+            background: linear-gradient(0deg, rgba(0,0,0,0.8) 0%, transparent 40%, transparent 60%, rgba(0,0,0,0.4) 100%);
+        }
         
-        /* SIDEBAR (LISTE D'AMIS) */
-        .sidebar { width: 350px; border-right: 1px solid var(--border); display: flex; flex-direction: column; transition: 0.3s; }
-        .sidebar-header { padding: 25px; font-size: 24px; font-weight: 800; color: var(--main); }
-        .user-list { flex: 1; overflow-y: auto; padding: 10px; }
-        .user-item { display: flex; align-items: center; gap: 15px; padding: 12px; border-radius: 18px; cursor: pointer; transition: 0.2s; margin-bottom: 5px; }
-        .user-item:hover { background: rgba(255,255,255,0.05); }
-        .avatar { width: 50px; height: 50px; border-radius: 50%; object-fit: cover; background: #222; }
+        .ui-content { 
+            position: absolute; inset: 0; z-index: 6; display: flex; flex-direction: column; justify-content: space-between; padding: 30px; 
+        }
 
-        /* CHAT AREA */
-        .chat-area { flex: 1; display: flex; flex-direction: column; background: url('https://w0.peakpx.com/wallpaper/596/633/HD-wallpaper-whatsapp-dark-patterns-black-texture.jpg'); background-size: contain; }
-        .chat-header { height: 70px; display: flex; align-items: center; justify-content: space-between; padding: 0 25px; }
-        
-        #messages { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 10px; }
-        .msg { max-width: 65%; padding: 12px 16px; border-radius: 20px; font-size: 14px; position: relative; line-height: 1.4; box-shadow: 0 2px 10px rgba(0,0,0,0.2); }
-        .msg.me { align-self: flex-end; background: var(--main); color: white; border-bottom-right-radius: 4px; }
-        .msg.you { align-self: flex-start; background: #262629; color: white; border-bottom-left-radius: 4px; }
-        .msg img { width: 100%; border-radius: 12px; margin-top: 5px; }
-        .msg-time { font-size: 10px; opacity: 0.6; display: block; text-align: right; margin-top: 4px; }
+        /* CHAT SLIM MODERNE */
+        #chat-zone { 
+            width: 320px; height: 400px; display: flex; flex-direction: column; 
+            pointer-events: auto; background: var(--glass); backdrop-filter: blur(20px);
+            border-radius: 30px; border: 1px solid rgba(255,255,255,0.1); overflow: hidden;
+        }
 
-        /* INPUT BAR */
-        .input-bar { padding: 20px; display: flex; gap: 12px; align-items: center; background: rgba(10,10,11,0.9); }
-        .input-pill { flex: 1; background: #1c1c1e; border: 1px solid #333; padding: 14px 20px; border-radius: 30px; color: #fff; outline: none; }
-        
-        /* LOGIN MODAL */
-        #auth { position: fixed; inset: 0; background: #000; z-index: 10000; display: flex; align-items: center; justify-content: center; }
-        .auth-card { width: 320px; text-align: center; }
+        .messages { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+        .m { padding: 10px 16px; border-radius: 18px; font-size: 14px; max-width: 80%; }
+        .m.me { background: var(--accent); align-self: flex-end; }
+        .m.you { background: rgba(255,255,255,0.1); align-self: flex-start; }
 
-        /* VIDEO CALL */
-        #video-view { display: none; position: fixed; inset: 0; background: #000; z-index: 9999; }
-        #remote-v { width: 100%; height: 100%; object-fit: cover; }
-        #local-v { position: absolute; top: 30px; right: 20px; width: 120px; height: 180px; border-radius: 20px; border: 2px solid #fff; object-fit: cover; }
+        .input-box { padding: 15px; display: flex; gap: 10px; background: rgba(0,0,0,0.2); }
+        input { 
+            flex: 1; background: rgba(255,255,255,0.1); border: none; padding: 12px 20px; 
+            border-radius: 20px; color: #fff; outline: none; font-size: 14px;
+        }
 
-        @media (max-width: 768px) {
-            .sidebar { width: 100%; position: absolute; z-index: 5; }
-            .sidebar.hidden { transform: translateX(-100%); }
-            .chat-area { width: 100%; }
+        /* CONTROLS */
+        .bottom-actions { display: flex; justify-content: center; gap: 20px; pointer-events: auto; }
+        .btn-circle { 
+            width: 60px; height: 60px; border-radius: 50%; border: none; 
+            background: var(--glass); backdrop-filter: blur(10px); color: #fff;
+            cursor: pointer; transition: 0.3s; display: flex; align-items: center; justify-content: center;
+        }
+        .btn-circle:hover { background: var(--accent); transform: scale(1.1); }
+        .btn-next { width: 140px; border-radius: 30px; background: var(--accent); font-weight: bold; }
+
+        /* AUTH SCREEN */
+        #auth { 
+            position: fixed; inset: 0; z-index: 1000; background: #000; 
+            display: flex; flex-direction: column; align-items: center; justify-content: center; 
         }
     </style>
 </head>
 <body>
 
     <div id="auth">
-        <div class="auth-card">
-            <h1 style="color:var(--main); font-size:42px; margin:0;">BANËA</h1>
-            <p style="opacity:0.5; margin-bottom:40px;">Social & Video Discovery</p>
-            <input type="text" id="username" class="input-pill" style="width:100%; margin-bottom:15px;" placeholder="Ton prénom">
-            <button onclick="login()" style="width:100%; padding:15px; border-radius:30px; border:none; background:var(--main); color:white; font-weight:bold; cursor:pointer;">REJOINDRE</button>
-        </div>
+        <h1 style="font-size: 48px; letter-spacing: -2px; margin-bottom: 5px;">BANËA<span style="color:var(--accent)">.</span></h1>
+        <p style="opacity: 0.4; margin-bottom: 40px;">Professional Grade Video Networking</p>
+        <input type="text" id="nick" placeholder="Username" style="width: 280px; text-align: center; margin-bottom: 20px; border: 1px solid #333;">
+        <button onclick="boot()" style="width: 280px; padding: 18px; border-radius: 20px; border: none; background: var(--accent); color: #fff; font-weight: 800; cursor: pointer;">START DISCOVERY</button>
     </div>
 
-    <div class="app-shell">
-        <div class="sidebar glass" id="sidebar">
-            <div class="sidebar-header">Messages</div>
-            <div class="user-list" id="user-list">
-                </div>
+    <div id="main-view">
+        <div class="video-container">
+            <video id="remote-video" autoplay playsinline></video>
         </div>
-
-        <div class="chat-area">
-            <div class="chat-header glass">
-                <div style="display:flex; align-items:center; gap:12px;">
-                    <button onclick="toggleSidebar()" style="background:none; border:none; color:white; font-size:20px;" class="mobile-only">☰</button>
-                    <b id="chat-title">Choisis une discussion</b>
-                </div>
-                <div id="call-btns" style="display:none; gap:15px;">
-                    <button onclick="startCall()" style="background:none; border:none; font-size:20px;">📞</button>
-                    <button onclick="block()" style="background:none; border:none; font-size:20px;">🚫</button>
+        <video id="local-video" autoplay muted playsinline></video>
+        
+        <div class="overlay"></div>
+        
+        <div class="ui-content">
+            <div id="top-bar" style="display:flex; justify-content:space-between; align-items:flex-start; pointer-events: auto;">
+                <div style="background:var(--glass); padding:10px 20px; border-radius:20px; backdrop-filter:blur(10px);">
+                    <b id="partner-name">Searching...</b>
                 </div>
             </div>
 
-            <div id="messages"></div>
+            <div id="chat-zone">
+                <div class="messages" id="msgs"></div>
+                <div class="input-box">
+                    <input type="text" id="m-in" placeholder="Message...">
+                    <button onclick="send()" style="background:none; border:none; color:var(--accent); font-weight:800;">SEND</button>
+                </div>
+            </div>
 
-            <div class="input-bar glass">
-                <button onclick="document.getElementById('img-in').click()" style="background:none; border:none; font-size:22px;">🖼️</button>
-                <input type="file" id="img-in" hidden accept="image/*" onchange="sendImage(this)">
-                <input type="text" id="msg-input" class="input-pill" placeholder="Écrire...">
-                <button onclick="send()" style="background:none; border:none; color:var(--main); font-weight:bold; font-size:18px;">➔</button>
+            <div class="bottom-actions">
+                <button class="btn-circle">🎤</button>
+                <button class="btn-circle btn-next" onclick="next()">NEXT MATCH</button>
+                <button class="btn-circle">📷</button>
             </div>
         </div>
-    </div>
-
-    <div id="video-view">
-        <video id="remote-v" autoplay playsinline></video>
-        <video id="local-v" autoplay muted playsinline></video>
-        <button onclick="endCall()" style="position:absolute; bottom:50px; left:50%; transform:translateX(-50%); background:red; border:none; padding:15px 30px; border-radius:30px; color:white; font-weight:bold;">RACCROCHER</button>
     </div>
 
     <script>
-        let socket, peer, myUid, myStream, targetSid, targetPid, logs = {};
+        let socket, peer, localStream, currentCall, myId, logs = [];
 
-        // 1. GESTION DE L'HISTORIQUE (LocalStorage)
-        function saveLog(uid, msg) {
-            if(!logs[uid]) logs[uid] = [];
-            logs[uid].push(msg);
-            localStorage.setItem(`banea_logs_${myUid}`, JSON.stringify(logs));
-        }
+        async function boot() {
+            const nick = document.getElementById('nick').value;
+            if(!nick) return;
 
-        function loadLogs() {
-            const saved = localStorage.getItem(`banea_logs_${myUid}`);
-            if(saved) logs = JSON.parse(saved);
-        }
+            // CONFIG AUDIO PRO : Tuer l'écho et le bruit de fond
+            try {
+                localStream = await navigator.mediaDevices.getUserMedia({
+                    video: { width: 1280, height: 720, facingMode: "user" },
+                    audio: {
+                        echoCancellation: { ideal: true },
+                        noiseSuppression: { ideal: true },
+                        autoGainControl: { ideal: true }
+                    }
+                });
+                document.getElementById('local-video').srcObject = localStream;
+            } catch (e) { alert("Camera Access Required"); return; }
 
-        // 2. INITIALISATION
-        function login() {
-            const name = document.getElementById('username').value;
-            if(!name) return;
-            
-            myUid = 'user_' + Math.random().toString(36).substr(2, 9);
             document.getElementById('auth').style.display = 'none';
-            loadLogs();
-
             socket = io();
             peer = new Peer();
 
             peer.on('open', id => {
-                socket.emit('join-room', { username: name, uid: myUid, peerId: id });
+                myId = id;
+                socket.emit('join', { name: nick, peerId: id });
             });
 
-            socket.on('update-users', users => {
-                const list = document.getElementById('user-list');
-                list.innerHTML = "";
-                users.forEach(u => {
-                    if(u.id !== socket.id) {
-                        const div = document.createElement('div');
-                        div.className = "user-item";
-                        div.onclick = () => openChat(u);
-                        div.innerHTML = `<img src="${u.avatar}" class="avatar"><div><b>${u.name}</b><br><small style="color:#30d158">En ligne</small></div>`;
-                        list.appendChild(div);
+            peer.on('call', call => {
+                call.answer(localStream);
+                setupCall(call);
+            });
+
+            socket.on('roster', users => {
+                // Logique de matching automatique ici
+                const other = users.find(u => u.peerId !== myId);
+                if(other) {
+                    document.getElementById('partner-name').innerText = other.name;
+                    // Auto call if we are the "initiator"
+                    if(myId > other.peerId) {
+                        const call = peer.call(other.peerId, localStream);
+                        setupCall(call);
                     }
-                });
-            });
-
-            socket.on('receive-message', data => {
-                const partner = (data.fromUid === myUid) ? targetSid : data.fromId; 
-                saveLog(partner, data);
-                if(targetSid === partner) render();
-            });
-
-            peer.on('call', async call => {
-                if(confirm("Appel vidéo entrant...")) {
-                    myStream = await navigator.mediaDevices.getUserMedia({video:true, audio:{echoCancellation:true}});
-                    document.getElementById('video-view').style.display = 'block';
-                    document.getElementById('local-v').srcObject = myStream;
-                    call.answer(myStream);
-                    call.on('stream', rs => document.getElementById('remote-v').srcObject = rs);
                 }
             });
         }
 
-        // 3. MESSAGERIE
-        function openChat(user) {
-            targetSid = user.id;
-            targetPid = user.peerId;
-            document.getElementById('chat-title').innerText = user.name;
-            document.getElementById('call-btns').style.display = 'flex';
-            if(window.innerWidth < 768) toggleSidebar();
-            render();
-        }
-
-        function render() {
-            const box = document.getElementById('messages');
-            box.innerHTML = "";
-            (logs[targetSid] || []).forEach(m => {
-                const d = document.createElement('div');
-                d.className = `msg ${m.fromUid === myUid ? 'me' : 'you'}`;
-                d.innerHTML = m.type === 'image' ? `<img src="${m.text}">` : m.text;
-                d.innerHTML += `<span class="msg-time">${m.time}</span>`;
-                box.appendChild(d);
+        function setupCall(call) {
+            currentCall = call;
+            call.on('stream', remoteStream => {
+                const rv = document.getElementById('remote-video');
+                rv.srcObject = remoteStream;
+                // Hack Pro: Forcer le volume pour éviter la saturation
+                rv.volume = 0.8; 
             });
-            box.scrollTop = box.scrollHeight;
         }
 
         function send() {
-            const val = document.getElementById('msg-input').value;
-            if(!val) return;
-            socket.emit('send-message', { toSocketId: targetSid, fromUid: myUid, text: val, type: 'text' });
-            document.getElementById('msg-input').value = "";
+            const i = document.getElementById('m-in');
+            if(!i.value) return;
+            // Ici on utiliserait un DataChannel pour la vitesse Azar
+            const msg = { text: i.value, me: true };
+            addMsg(msg);
+            i.value = "";
         }
 
-        function sendImage(input) {
-            const reader = new FileReader();
-            reader.onload = () => {
-                socket.emit('send-message', { toSocketId: targetSid, fromUid: myUid, text: reader.result, type: 'image' });
-            };
-            reader.readAsDataURL(input.files[0]);
+        function addMsg(m) {
+            const d = document.createElement('div');
+            d.className = `m ${m.me ? 'me' : 'you'}`;
+            d.innerText = m.text;
+            document.getElementById('msgs').appendChild(d);
+            document.getElementById('msgs').scrollTop = 9999;
         }
 
-        // 4. VIDÉO & FILTRES
-        async function startCall() {
-            myStream = await navigator.mediaDevices.getUserMedia({video:true, audio:{echoCancellation:true}});
-            document.getElementById('video-view').style.display = 'block';
-            document.getElementById('local-v').srcObject = myStream;
-            const call = peer.call(targetPid, myStream);
-            call.on('stream', rs => document.getElementById('remote-v').srcObject = rs);
-        }
-
-        function endCall() {
-            document.getElementById('video-view').style.display = 'none';
-            if(myStream) myStream.getTracks().forEach(t => t.stop());
-        }
-
-        function toggleSidebar() {
-            document.getElementById('sidebar').classList.toggle('hidden');
+        function next() {
+            if(currentCall) currentCall.close();
+            // Logique de recherche Azar
+            location.reload(); 
         }
     </script>
 </body>
