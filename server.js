@@ -6,18 +6,27 @@ const path = require('path');
 
 app.use(express.static(__dirname));
 
-let allUsers = [];
+let users = {};
 
 io.on('connection', (socket) => {
     socket.on('join-room', (data) => {
-        const newUser = { id: socket.id, name: data.username, peerId: data.peerId };
-        allUsers.push(newUser);
-        io.emit('update-users', allUsers);
+        users[socket.id] = { 
+            id: socket.id, 
+            name: data.username, 
+            peerId: data.peerId, 
+            avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${data.username}` 
+        };
+        io.emit('update-users', Object.values(users));
+    });
+
+    socket.on('typing', (data) => {
+        socket.to(data.to).emit('is-typing', { from: socket.id });
     });
 
     socket.on('send-private-message', (data) => {
-        io.to(data.toSocketId).emit('receive-private-message', { sender: data.sender, text: data.text });
-        socket.emit('receive-private-message', { sender: data.sender, text: data.text });
+        const msg = { sender: users[socket.id].name, text: data.text, time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) };
+        io.to(data.toSocketId).emit('receive-private-message', { ...msg, fromId: socket.id });
+        socket.emit('receive-private-message', { ...msg, fromId: socket.id });
     });
 
     socket.on('propose-call', (data) => {
@@ -25,10 +34,10 @@ io.on('connection', (socket) => {
     });
 
     socket.on('disconnect', () => {
-        allUsers = allUsers.filter(u => u.id !== socket.id);
-        io.emit('update-users', allUsers);
+        delete users[socket.id];
+        io.emit('update-users', Object.values(users));
     });
 });
 
 const PORT = process.env.PORT || 8080;
-http.listen(PORT, () => console.log(`Serveur prêt`));
+http.listen(PORT, () => console.log('Expert Server Ready'));
