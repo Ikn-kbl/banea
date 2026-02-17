@@ -2,7 +2,6 @@ const express = require('express');
 const app = express();
 const http = require('http').createServer(app);
 const io = require('socket.io')(http);
-const path = require('path');
 
 app.use(express.static(__dirname));
 
@@ -23,12 +22,20 @@ io.on('connection', (socket) => {
 
     socket.on('send-private-message', (data) => {
         const msg = { 
+            fromId: socket.id, // ID de l'envoyeur (indispensable pour le filtrage)
             sender: users[socket.id].name, 
             text: data.text, 
             time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) 
         };
+        
+        // On envoie UNIQUEMENT au destinataire ciblé
         io.to(data.toSocketId).emit('receive-private-message', msg);
+        // On renvoie à l'expéditeur pour confirmation
         socket.emit('receive-private-message', msg);
+    });
+
+    socket.on('end-call', (data) => {
+        io.to(data.toSocketId).emit('call-ended-by-peer');
     });
 
     socket.on('propose-call', (data) => {
@@ -39,10 +46,6 @@ io.on('connection', (socket) => {
         });
     });
 
-    socket.on('end-call', (data) => {
-        io.to(data.toSocketId).emit('call-ended-by-peer');
-    });
-
     socket.on('disconnect', () => {
         delete users[socket.id];
         io.emit('update-users', Object.values(users));
@@ -50,5 +53,4 @@ io.on('connection', (socket) => {
 });
 
 const PORT = process.env.PORT || 8080;
-http.listen(PORT, () => console.log('Server V80 Ready'));
-
+http.listen(PORT, () => console.log('BANËA V90 - Private Security Enabled'));
