@@ -2,190 +2,102 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>BANËA ULTRA</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BANËA PRO</title>
     <script src="/socket.io/socket.io.js"></script>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
-        :root { --accent: #ff3b5c; --glass: rgba(255, 255, 255, 0.05); }
-        body, html { margin: 0; padding: 0; background: #000; color: #fff; font-family: 'Inter', system-ui; height: 100%; overflow: hidden; }
-
-        /* INTERFACE AZAR STYLE - FULL VIDEO BACKGROUND */
-        #main-view { position: relative; height: 100vh; width: 100vw; display: flex; }
+        :root { --accent: #ff3b5c; --bg: #0a0a0a; }
+        body { margin: 0; background: var(--bg); color: white; font-family: sans-serif; overflow: hidden; }
         
-        /* VIDEO RENDERERS */
-        .video-container { position: absolute; inset: 0; z-index: 1; background: #0a0a0a; }
-        video { width: 100%; height: 100%; object-fit: cover; filter: contrast(1.1) brightness(1.1); }
-        #local-video { 
-            position: absolute; top: 20px; right: 20px; width: 120px; height: 180px; 
-            z-index: 10; border-radius: 20px; border: 1px solid rgba(255,255,255,0.2);
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5); transform: scaleX(-1);
-        }
+        /* LOGIN */
+        #auth { position: fixed; inset: 0; background: #000; z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .btn-start { background: var(--accent); color: white; border: none; padding: 15px 40px; border-radius: 30px; font-weight: bold; cursor: pointer; font-size: 18px; }
 
-        /* GLASS UI PANELS */
-        .overlay { 
-            position: absolute; inset: 0; z-index: 5; pointer-events: none;
-            background: linear-gradient(0deg, rgba(0,0,0,0.8) 0%, transparent 40%, transparent 60%, rgba(0,0,0,0.4) 100%);
-        }
+        /* VIDEO GRID - STYLE AZAR */
+        #video-grid { display: grid; grid-template-columns: 1fr; grid-template-rows: 1fr; height: 100vh; width: 100vw; }
+        #video-grid.dual { grid-template-rows: 1fr 1fr; } /* Un au dessus de l'autre sur mobile */
         
-        .ui-content { 
-            position: absolute; inset: 0; z-index: 6; display: flex; flex-direction: column; justify-content: space-between; padding: 30px; 
-        }
+        video { width: 100%; height: 100%; object-fit: cover; background: #222; }
+        #local-video { transform: scaleX(-1); border-bottom: 2px solid var(--accent); }
 
-        /* CHAT SLIM MODERNE */
-        #chat-zone { 
-            width: 320px; height: 400px; display: flex; flex-direction: column; 
-            pointer-events: auto; background: var(--glass); backdrop-filter: blur(20px);
-            border-radius: 30px; border: 1px solid rgba(255,255,255,0.1); overflow: hidden;
-        }
-
-        .messages { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
-        .m { padding: 10px 16px; border-radius: 18px; font-size: 14px; max-width: 80%; }
-        .m.me { background: var(--accent); align-self: flex-end; }
-        .m.you { background: rgba(255,255,255,0.1); align-self: flex-start; }
-
-        .input-box { padding: 15px; display: flex; gap: 10px; background: rgba(0,0,0,0.2); }
-        input { 
-            flex: 1; background: rgba(255,255,255,0.1); border: none; padding: 12px 20px; 
-            border-radius: 20px; color: #fff; outline: none; font-size: 14px;
-        }
-
-        /* CONTROLS */
-        .bottom-actions { display: flex; justify-content: center; gap: 20px; pointer-events: auto; }
-        .btn-circle { 
-            width: 60px; height: 60px; border-radius: 50%; border: none; 
-            background: var(--glass); backdrop-filter: blur(10px); color: #fff;
-            cursor: pointer; transition: 0.3s; display: flex; align-items: center; justify-content: center;
-        }
-        .btn-circle:hover { background: var(--accent); transform: scale(1.1); }
-        .btn-next { width: 140px; border-radius: 30px; background: var(--accent); font-weight: bold; }
-
-        /* AUTH SCREEN */
-        #auth { 
-            position: fixed; inset: 0; z-index: 1000; background: #000; 
-            display: flex; flex-direction: column; align-items: center; justify-content: center; 
-        }
+        /* UI OVERLAY */
+        .controls { position: absolute; bottom: 30px; left: 0; right: 0; display: flex; justify-content: center; gap: 20px; z-index: 10; }
+        .icon-btn { width: 60px; height: 60px; border-radius: 50%; border: none; background: rgba(255,255,255,0.2); backdrop-filter: blur(10px); color: white; font-size: 20px; cursor: pointer; }
+        .btn-next { width: 120px; border-radius: 30px; background: var(--accent); }
     </style>
 </head>
 <body>
 
     <div id="auth">
-        <h1 style="font-size: 48px; letter-spacing: -2px; margin-bottom: 5px;">BANËA<span style="color:var(--accent)">.</span></h1>
-        <p style="opacity: 0.4; margin-bottom: 40px;">Professional Grade Video Networking</p>
-        <input type="text" id="nick" placeholder="Username" style="width: 280px; text-align: center; margin-bottom: 20px; border: 1px solid #333;">
-        <button onclick="boot()" style="width: 280px; padding: 18px; border-radius: 20px; border: none; background: var(--accent); color: #fff; font-weight: 800; cursor: pointer;">START DISCOVERY</button>
+        <h1 style="color:var(--accent)">BANËA</h1>
+        <input type="text" id="nick" placeholder="Ton nom..." style="padding:15px; border-radius:15px; border:none; margin-bottom:20px; width:250px;">
+        <button class="btn-start" onclick="start()">ENTRER</button>
     </div>
 
-    <div id="main-view">
-        <div class="video-container">
-            <video id="remote-video" autoplay playsinline></video>
-        </div>
+    <div id="video-grid">
         <video id="local-video" autoplay muted playsinline></video>
-        
-        <div class="overlay"></div>
-        
-        <div class="ui-content">
-            <div id="top-bar" style="display:flex; justify-content:space-between; align-items:flex-start; pointer-events: auto;">
-                <div style="background:var(--glass); padding:10px 20px; border-radius:20px; backdrop-filter:blur(10px);">
-                    <b id="partner-name">Searching...</b>
-                </div>
-            </div>
-
-            <div id="chat-zone">
-                <div class="messages" id="msgs"></div>
-                <div class="input-box">
-                    <input type="text" id="m-in" placeholder="Message...">
-                    <button onclick="send()" style="background:none; border:none; color:var(--accent); font-weight:800;">SEND</button>
-                </div>
-            </div>
-
-            <div class="bottom-actions">
-                <button class="btn-circle">🎤</button>
-                <button class="btn-circle btn-next" onclick="next()">NEXT MATCH</button>
-                <button class="btn-circle">📷</button>
-            </div>
         </div>
+
+    <div class="controls">
+        <button class="icon-btn">🎤</button>
+        <button class="icon-btn btn-next" onclick="location.reload()">SUIVANT</button>
+        <button class="icon-btn">💬</button>
     </div>
 
     <script>
-        let socket, peer, localStream, currentCall, myId, logs = [];
+        let socket, peer, myStream;
+        const grid = document.getElementById('video-grid');
 
-        async function boot() {
-            const nick = document.getElementById('nick').value;
-            if(!nick) return;
+        async function start() {
+            const name = document.getElementById('nick').value;
+            if(!name) return alert("Nom requis");
 
-            // CONFIG AUDIO PRO : Tuer l'écho et le bruit de fond
-            try {
-                localStream = await navigator.mediaDevices.getUserMedia({
-                    video: { width: 1280, height: 720, facingMode: "user" },
-                    audio: {
-                        echoCancellation: { ideal: true },
-                        noiseSuppression: { ideal: true },
-                        autoGainControl: { ideal: true }
-                    }
-                });
-                document.getElementById('local-video').srcObject = localStream;
-            } catch (e) { alert("Camera Access Required"); return; }
-
+            // 1. Capture Caméra avec config PRO pour le son
+            myStream = await navigator.mediaDevices.getUserMedia({
+                video: true,
+                audio: { echoCancellation: true, noiseSuppression: true }
+            });
+            document.getElementById('local-video').srcObject = myStream;
             document.getElementById('auth').style.display = 'none';
+
+            // 2. Initialisation Signalisation
             socket = io();
             peer = new Peer();
 
             peer.on('open', id => {
-                myId = id;
-                socket.emit('join', { name: nick, peerId: id });
+                socket.emit('join', { name: name, peerId: id });
             });
 
+            // 3. Quand quelqu'un nous appelle
             peer.on('call', call => {
-                call.answer(localStream);
-                setupCall(call);
+                call.answer(myStream);
+                handleCall(call);
             });
 
-            socket.on('roster', users => {
-                // Logique de matching automatique ici
-                const other = users.find(u => u.peerId !== myId);
-                if(other) {
-                    document.getElementById('partner-name').innerText = other.name;
-                    // Auto call if we are the "initiator"
-                    if(myId > other.peerId) {
-                        const call = peer.call(other.peerId, localStream);
-                        setupCall(call);
-                    }
+            // 4. Logique de matching
+            socket.on('users', users => {
+                const partner = users.find(u => u.peerId !== peer.id);
+                if(partner && !document.getElementById('remote-video')) {
+                    const call = peer.call(partner.peerId, myStream);
+                    handleCall(call);
                 }
             });
         }
 
-        function setupCall(call) {
-            currentCall = call;
+        function handleCall(call) {
             call.on('stream', remoteStream => {
-                const rv = document.getElementById('remote-video');
+                if(document.getElementById('remote-video')) return;
+
+                const rv = document.createElement('video');
+                rv.id = 'remote-video';
+                rv.autoplay = true;
+                rv.playsInline = true;
                 rv.srcObject = remoteStream;
-                // Hack Pro: Forcer le volume pour éviter la saturation
-                rv.volume = 0.8; 
+                
+                grid.classList.add('dual');
+                grid.appendChild(rv);
             });
-        }
-
-        function send() {
-            const i = document.getElementById('m-in');
-            if(!i.value) return;
-            // Ici on utiliserait un DataChannel pour la vitesse Azar
-            const msg = { text: i.value, me: true };
-            addMsg(msg);
-            i.value = "";
-        }
-
-        function addMsg(m) {
-            const d = document.createElement('div');
-            d.className = `m ${m.me ? 'me' : 'you'}`;
-            d.innerText = m.text;
-            document.getElementById('msgs').appendChild(d);
-            document.getElementById('msgs').scrollTop = 9999;
-        }
-
-        function next() {
-            if(currentCall) currentCall.close();
-            // Logique de recherche Azar
-            location.reload(); 
         }
     </script>
 </body>
